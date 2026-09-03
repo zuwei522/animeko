@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2024-2026 OpenAni and contributors.
  *
- * 此源代码的使用受 GNU AFFERO GENERAL PUBLIC LICENSE version 3 许可证的约束, 可以在以下链接找到该许可证.
- * Use of this source code is governed by the GNU AGPLv3 license, which can be found at the following link.
+ * 此源代码的使用受 GNU AFFERO GENERAL PUBLIC LICENSE version 3 \u8BB8\u53EF\u8BC1\u7684\u7EA6\u675F, \u53EF\u4EE5\u5728\u4EE5\u4E0B\u94FE\u63A5\u627E\u5230\u8BE5\u8BB8\u53EF\u8BC1.
+ * Use of this source code is governed by the GNU AGPLv3 license, which can be found at the following link:
  *
  * https://github.com/open-ani/ani/blob/main/LICENSE
  */
@@ -138,7 +138,11 @@ fun KotlinSourceSet.configureKotlinOptIns() {
 }
 
 val Project.DEFAULT_JVM_TOOLCHAIN_VENDOR
-    get() = getPropertyOrNull("jvm.toolchain.vendor")?.let { JvmVendorSpec.matching(it) }
+    get() = getPropertyOrNull("jvm.toolchain.vendor")
+        // "any" \u8868\u793A\u4E0D\u9650\u5236 vendor (JvmVendorSpec.matching \u662F\u5927\u5C0F\u5199\u654F\u611F\u7684 substring \u5339\u914D,
+        // "any" \u5339\u914D\u4E0D\u5230 "Eclipse Temurin", \u56E0\u6B64\u6B64\u5904\u5BF9 any/blank \u8FD4\u56DE null \u8868\u793A\u4E0D\u9650 vendor)
+        ?.takeUnless { it.equals("any", ignoreCase = true) || it.isBlank() }
+        ?.let { JvmVendorSpec.matching(it) }
 
 private fun Project.getProjectPreferredJvmTargetVersion() =
     JavaVersion.toVersion(getPropertyOrNull("jvm.toolchain.version")?.toInt() ?: 21)
@@ -148,7 +152,7 @@ fun Project.configureJvmTarget() {
     logger.info("JVM target for project ${this.path} is: $ver")
     val target = JvmTarget.fromTarget(ver.toString())
 
-    // 我也不知道到底设置谁就够了, 反正全都设置了
+    // \u6211\u4E5F\u4E0D\u77E5\u9053\u5230\u5E95\u8BBE\u7F6E\u8C01\u5C31\u591F\u4E86, \u53CD\u6B63\u90FD\u8BBE\u7F6E\u4E86
 
     tasks.withType(KotlinJvmCompile::class.java).configureEach {
         compilerOptions.jvmTarget.set(target)
@@ -179,7 +183,7 @@ fun Project.configureJvmTarget() {
         }
     }
 
-    // 配置期读一次, 避免每个 compilation 回调里重复读 local.properties.
+    // \u914D\u7F6E\u671F\u8BFB\u4E00\u6B21, \u907F\u514D\u6BCF\u4E2A compilation \u56DE\u8C03\u91CC\u91CD\u590D\u8BFB local.properties.
     val renderInternalDiagnosticNames =
         getLocalProperty("ani.kotlin.render-internal-diagnostic-names")?.toBooleanStrict() == true
 
@@ -229,7 +233,7 @@ fun Project.configureKotlinTestSettings() {
         if (this !is KotlinJvmTarget) return@configureEach
         testRuns.configureEach { executionTask.configure { useJUnitPlatform() } }
 
-        // 从 target 侧驱动, 免去从源集名字反推 target.
+        // \u4ECE target \u4FA7\u9A71\u52A8, \u514D\u53BB\u4ECE\u6E90\u96C6\u540D\u5B57\u53CD\u63A8 target.
         val targetName = name
         kotlinSourceSets?.matching { it.name == "${targetName}Test" }
             ?.configureEach { configureJvmTest(b) }
@@ -248,13 +252,13 @@ fun Project.configureKotlinTestSettings() {
         isKotlinMpp -> {
             val sourceSets = kotlinSourceSets ?: return
 
-            // 三个源集都要拿到 JVM 测试依赖, 少了 androidTest 会丢掉整套 junit5.
-            // 用 live filtered collection 注册, 源集何时创建都能命中, 因此不需要 afterEvaluate.
+            // \u4E09\u4E2A\u6E90\u96C6\u90FD\u8981\u62FF\u5230 JVM \u6D4B\u8BD5\u4F9D\u8D56, \u5C11\u4E86 androidTest \u4F1A\u4E22\u6389\u6574\u5957 junit5.
+            // \u7528 live filtered collection \u6CE8\u518C, \u6E90\u96C6\u4F55\u65F6\u521B\u5EFA\u90FD\u80FD\u547D\u4E2D, \u56E0\u6B64\u4E0D\u9700\u8981 afterEvaluate.
             sourceSets.matching {
                 it.name == "androidTest" || it.name == "androidHostTest" || it.name == "androidDeviceTest"
             }.configureEach { configureJvmTest(b) }
 
-            // runner 只加在叶子源集上.
+            // runner \u53EA\u52A0\u5728\u53F6\u5B50\u6E90\u96C6\u4E0A.
             sourceSets.matching { it.name == "androidHostTest" || it.name == "androidDeviceTest" }
                 .configureEach {
                     dependencies {
@@ -274,8 +278,8 @@ fun Project.configureKotlinTestSettings() {
 }
 
 /**
- * 给 Compose + Android KMP Library 自动加上 ui-tooling.
- * androidRuntimeClasspath 要等 android target 声明后才存在, 所以用 matching{} 延迟注册.
+ * \u7ED9 Compose + Android KMP Library \u81EA\u52A8\u52A0\u4E0A ui-tooling.
+ * androidRuntimeClasspath \u8981\u7B49 android target \u58F0\u660E\u540E\u624D\u5B58\u5728, \u6240\u4EE5\u7528 matching{} \u5EF6\u8FDF\u6CE8\u518C.
  */
 fun Project.configureComposePreviewToolingDependency() {
     val notation = versionCatalogLibs().getLibrary("compose-ui-tooling")

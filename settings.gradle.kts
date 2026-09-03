@@ -2,7 +2,7 @@
  * Copyright (C) 2024-2026 OpenAni and contributors.
  *
  * 此源代码的使用受 GNU AFFERO GENERAL PUBLIC LICENSE version 3 许可证的约束, 可以在以下链接找到该许可证.
- * Use of this source code is governed by the GNU AGPLv3 license, which can be found at the following link.
+ * Use of this source code is governed by the GNU AGPLv3 license, which can be found at the following link:
  *
  * https://github.com/open-ani/ani/blob/main/LICENSE
  */
@@ -12,10 +12,15 @@ import java.util.Properties
 rootProject.name = "animeko"
 
 pluginManagement {
-    // 约定插件来自 build-logic; 必须在 settings 里 includeBuild, plugins {} 才解析得到 `ani.*`.
+    // \u7EA6\u5B9A\u63D2\u4EF6\u6765\u81EA build-logic; \u5FC5\u987B\u5728 settings \u91CC includeBuild, plugins {} \u624D\u89E3\u6790\u5F97\u5230 `ani.*`.
     includeBuild("build-logic")
 
     repositories {
+        // \u672C\u5730 Maven \u4ED3\u5E93 (\u6301\u4E45\u5316\u76EE\u5F55): \u5B58\u653E\u4ECE mvnrepository \u624B\u52A8\u4E0B\u8F7D\u7684 google-services \u63D2\u4EF6
+        // (com.google.gms:google-services:4.4.2), \u7528\u4E8E\u7ED5\u8FC7 dl.google.com \u5BF9\u8BE5\u63D2\u4EF6 artifact \u7684 404 \u95EE\u9898.
+        maven {
+            url = uri(rootDir.resolve("..").resolve("dev-env").resolve("m2-repo").absolutePath)
+        }
         gradlePluginPortal()
         mavenCentral()
         google()
@@ -24,11 +29,11 @@ pluginManagement {
 }
 
 dependencyResolutionManagement {
-    // 仓库策略属于 settings; FAIL_ON_PROJECT_REPOS 防止子项目再自己加仓库.
+    // \u4ED3\u5E93\u7B56\u7565\u5C5E\u4E8E settings; FAIL_ON_PROJECT_REPOS \u9632\u6B62\u5B50\u9879\u76EE\u518D\u81EA\u5DF1\u52A0\u4ED3\u5E93.
     repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
     @Suppress("UnstableApiUsage")
     repositories {
-        // mavenLocal 的位置不能动: 本地 mediamp / anitorrent 调试构建依赖它排在这里.
+        // mavenLocal \u7684\u4F4D\u7F6E\u4E0D\u80FD\u52A8: \u672C\u5730 mediamp / anitorrent \u8C03\u8BD5\u6784\u5EFA\u4F9D\u8D56\u5B83\u6392\u5728\u8FD9\u91CC.
         mavenCentral()
         google()
         mavenLocal()
@@ -65,7 +70,7 @@ fun includeProject(projectPath: String, dir: String? = null) {
 }
 
 // Utilities shared by client and server (targeting JVM)
-includeProject(":utils:platform") // 适配各个平台的基础 API
+includeProject(":utils:platform") // \u9002\u914D\u5404\u4E2A\u5E73\u53F0\u7684\u57FA\u7840 API
 includeProject(":utils:intellij-annotations")
 includeProject(":utils:logging") // shared by client and server (targets JVM)
 includeProject(":utils:serialization", "utils/serialization")
@@ -85,13 +90,13 @@ includeProject(":utils:analytics")
 includeProject(":utils:http-downloader")
 includeProject(":utils:build-config")
 includeProject(":utils:video-enhancement-shader-provider")
-includeProject(":utils:selector-workflow") // 数据源选择流程示意动画的数据层
+includeProject(":utils:selector-workflow") // \u6570\u636E\u6E90\u9009\u62E9\u6D41\u7A0B\u793A\u610F\u52A8\u753B\u7684\u6570\u636E\u5C42
 
 
-includeProject(":torrent:torrent-api", "torrent/api") // Torrent 系统 API
+includeProject(":torrent:torrent-api", "torrent/api") // Torrent \u7CFB\u7EDF API
 includeProject(":torrent:anitorrent")
 //includeProject(":torrent:anitorrent:anitorrent-native")
-includeProject(":torrent:pikpak") // PikPak 云离线下载后端
+includeProject(":torrent:pikpak") // PikPak \u4E91\u79BB\u7EBF\u4E0B\u8F7D\u540E\u7AEF
 
 includeProject(":app:shared")
 includeProject(":app:shared:app-platform")
@@ -107,7 +112,7 @@ includeProject(":app:shared:ui-exploration")
 includeProject(":app:shared:ui-comment")
 includeProject(":app:shared:ui-onboarding")
 includeProject(":app:shared:ui-mediaselect")
-includeProject(":app:shared:ui-tv") // Android TV (遥控器) 专属界面, 只含 android target
+includeProject(":app:shared:ui-tv") // Android TV (\u9065\u63A7\u5668) \u4E13\u5C5E\u754C\u9762, \u53EA\u542B android target
 includeProject(":app:shared:ui-episode")
 includeProject(":app:shared:ui-exprovider")
 includeProject(":app:shared:ui-watchtogether")
@@ -134,17 +139,17 @@ includeProject(":client")
 
 // data sources
 includeProject(":datasource:datasource-api", "datasource/api") // data source interfaces: Media, MediaSource 
-includeProject(":datasource:datasource-api:test-codegen", "datasource/api/test-codegen") // 生成单元测试
+includeProject(":datasource:datasource-api:test-codegen", "datasource/api/test-codegen") // \u751F\u6210\u5355\u5143\u6D4B\u8BD5
 includeProject(
     ":datasource:datasource-core",
     "datasource/core",
 ) // data source managers: MediaFetcher, MediaCacheStorage
 includeProject(":datasource:bangumi", "datasource/bangumi") // https://bangumi.tv
-//   BT 数据源
+//   BT \u6570\u636E\u6E90
 includeProject(":datasource:dmhy", "datasource/bt/dmhy") // https://dmhy.org
 includeProject(":datasource:mikan", "datasource/bt/mikan") // https://mikanani.me/
-//   Web 数据源
-includeProject(":datasource:web-base", "datasource/web/web-base") // web 基础
+//   Web \u6570\u636E\u6E90
+includeProject(":datasource:web-base", "datasource/web/web-base") // web \u57FA\u7840
 includeProject(":datasource:jellyfin", "datasource/jellyfin")
 includeProject(":datasource:ikaros", "datasource/ikaros") // https://ikaros.run/
 
@@ -170,7 +175,7 @@ includeProject(":tools:datasource-test-mcp", "tools/datasource-test-mcp")
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 
-// settings 先于 build-logic 构建, 拿不到 LocalPropertiesValueSource, 这里单独实现一份.
+// settings \u5148\u4E8E build-logic \u6784\u5EFA, \u62FF\u4E0D\u5230 LocalPropertiesValueSource, \u8FD9\u91CC\u5355\u72EC\u5B9E\u73B0\u4E00\u4EFD.
 val localProperties: Provider<Properties> =
     providers.fileContents(layout.settingsDirectory.file("local.properties")).asText
         .map { text -> Properties().apply { text.reader().use { load(it) } } }

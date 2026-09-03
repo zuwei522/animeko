@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2024-2026 OpenAni and contributors.
  *
- * 此源代码的使用受 GNU AFFERO GENERAL PUBLIC LICENSE version 3 许可证的约束, 可以在以下链接找到该许可证.
+ * 此源代码的使用受 GNU AFFERO GENERAL PUBLIC LICENSE version 3 \u8BB8\u53EF\u8BC1\u7684\u7EA6\u675F, \u53EF\u4EE5\u5728\u4EE5\u4E0B\u94FE\u63A5\u627E\u5230\u8BE5\u8BB8\u53EF\u8BC1.
  * Use of this source code is governed by the GNU AGPLv3 license, which can be found at the following link.
  *
  * https://github.com/open-ani/ani/blob/main/LICENSE
@@ -13,8 +13,8 @@ plugins {
     `kotlin-dsl`
 }
 
-// included build 不继承主构建的 gradle.properties, jvm.toolchain.* 必须显式从仓库根读,
-// 否则 toolchain 会悄悄回落到默认 JDK. (settingsDirectory 是 build-logic/ 自己, ".." 才是仓库根)
+// included build \u4E0D\u7EE7\u627F\u4E3B\u6784\u5EFA\u7684 gradle.properties, jvm.toolchain.* \u5FC5\u987B\u663E\u5F0F\u4ECE\u4ED3\u5E93\u6839\u8BFB,
+// \u5426\u5219 toolchain \u4F1A\u6084\u6084\u56DE\u843D\u5230\u9ED8\u8BA4 JDK. (settingsDirectory \u662F build-logic/ \u81EA\u5DF1, ".." \u624D\u662F\u4ED3\u5E93\u6839)
 fun rootProperties(fileName: String): Provider<Properties> =
     providers.fileContents(layout.settingsDirectory.dir("..").file(fileName)).asText
         .map { text -> Properties().apply { text.reader().use { load(it) } } }
@@ -29,7 +29,8 @@ fun toolchainProperty(name: String): Provider<String> =
 
 kotlin {
     jvmToolchain {
-        toolchainProperty("jvm.toolchain.vendor").orNull?.let { vendor.set(JvmVendorSpec.matching(it)) }
+        // \u672C\u5730\u6784\u5EFA\u73AF\u5883: \u79FB\u9664 vendor \u9650\u5236, \u4F7F\u7528\u4EFB\u610F JDK 21
+        // toolchainProperty("jvm.toolchain.vendor").orNull?.let { vendor.set(JvmVendorSpec.matching(it)) }
         toolchainProperty("jvm.toolchain.version").orNull?.let { languageVersion.set(JavaLanguageVersion.of(it)) }
     }
     compilerOptions {
@@ -65,7 +66,3 @@ dependencies {
     implementation(kotlin("script-runtime"))
     implementation(libs.snakeyaml)
 }
-
-
-
-
