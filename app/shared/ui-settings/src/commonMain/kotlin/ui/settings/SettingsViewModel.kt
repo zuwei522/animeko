@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2024-2026 OpenAni and contributors.
  *
- * 此源代码的使用受 GNU AFFERO GENERAL PUBLIC LICENSE version 3 许可证的约束, 可以在以下链接找到该许可证.
- * Use of this source code is governed by the GNU AGPLv3 license, which can be found at the following link.
+ * 此源代码的使用受 GNU AFFERO GENERAL PUBLIC LICENSE version 3 \u8BB8\u53EF\u8BC1\u7684\u7EA6\u675F, \u53EF\u4EE5\u5728\u4EE5\u4E0B\u94FE\u63A5\u627E\u5230\u8BE5\u8BB8\u53EF\u8BC1.
+ * Use of this source code is governed by the GNU AGPLv3 license, which can be found at the following link:
  *
  * https://github.com/open-ani/ani/blob/main/LICENSE
  */
@@ -26,6 +26,7 @@ import me.him188.ani.app.data.models.danmaku.DanmakuFilterConfig
 import me.him188.ani.app.data.models.danmaku.DanmakuRegexFilter
 import me.him188.ani.app.data.models.preference.AnalyticsSettings
 import me.him188.ani.app.data.models.preference.AnitorrentConfig
+import me.him188.ani.app.data.models.preference.BangumiMirrorSettings
 import me.him188.ani.app.data.models.preference.PikPakConfig
 import me.him188.ani.app.data.models.preference.DanmakuSettings
 import me.him188.ani.app.data.models.preference.DebugSettings
@@ -52,6 +53,7 @@ import me.him188.ani.app.data.repository.player.DanmakuRegexFilterRepository
 import me.him188.ani.app.data.repository.user.SettingsRepository
 import me.him188.ani.app.data.repository.user.TokenRepository
 import me.him188.ani.app.data.repository.user.TokenSave
+import me.him188.ani.app.data.repository.user.Settings
 import me.him188.ani.app.domain.foundation.HttpClientProvider
 import me.him188.ani.app.domain.foundation.get
 import me.him188.ani.app.domain.media.fetch.MediaSourceManager
@@ -154,7 +156,7 @@ class SettingsViewModel : AbstractSettingsViewModel(), KoinComponent {
     // therefore requires both credential fields blank, not just the password.
     //
     // We borrow/returnClient around each probe rather than borrowForever:
-    // every click on "测试连接" would otherwise pin a fresh client in the
+    // every click on "\u6D4B\u8BD5\u8FDE\u63A5" would otherwise pin a fresh client in the
     // ref-counted pool until process exit, so after e.g. a proxy change the
     // old clients (with their sockets / threads) would accumulate.
     @OptIn(UnsafeScopedHttpClientApi::class)
@@ -249,6 +251,11 @@ class SettingsViewModel : AbstractSettingsViewModel(), KoinComponent {
         },
         onRequestReTest = { proxyTester.restartTest() },
     )
+    // endregion
+
+    // region Bangumi Mirror
+    val bangumiMirrorSettings: Settings<BangumiMirrorSettings>
+        get() = settingsRepository.bangumiMirrorSettings
     // endregion
 
     val danmakuSettingsState =
