@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2024-2026 OpenAni and contributors.
  *
- * 此源代码的使用受 GNU AFFERO GENERAL PUBLIC LICENSE version 3 \u8BB8\u53EF\u8BC1\u7684\u7EA6\u675F, \u53EF\u4EE5\u5728\u4EE5\u4E0B\u94FE\u63A5\u627E\u5230\u8BE5\u8BB8\u53EF\u8BC1.
- * Use of this source code is governed by the GNU AGPLv3 license, which can be found at the following link:
+ * 此源代码的使用受 GNU AFFERO GENERAL PUBLIC LICENSE version 3 许可证的约束, 可以在以下链接找到该许可证.
+ * Use of this source code is governed by the GNU AGPLv3 license, which can be found at the following link.
  *
  * https://github.com/open-ani/ani/blob/main/LICENSE
  */
@@ -64,6 +64,7 @@ import me.him188.ani.app.domain.settings.ProxySettingsFlowProxyProvider
 import me.him188.ani.app.domain.settings.ProxyTester
 import me.him188.ani.app.domain.settings.ServiceConnectionTester
 import me.him188.ani.app.domain.settings.ServiceConnectionTesters
+import me.him188.ani.datasources.bangumi.BangumiEndpointProvider
 import me.him188.ani.app.platform.PermissionManager
 import me.him188.ani.app.platform.currentAniBuildConfig
 import me.him188.ani.app.ui.foundation.launchInBackground
@@ -112,6 +113,7 @@ class SettingsViewModel : AbstractSettingsViewModel(), KoinComponent {
     private val mediaSourceCodecManager: MediaSourceCodecManager by inject()
     private val clientProvider: HttpClientProvider by inject()
     private val tmdbImageService: TmdbImageService by inject()
+    private val bangumiEndpointProvider: BangumiEndpointProvider by inject()
     private val tokenRepository: TokenRepository by inject()
 
     private val proxyProvider = ProxySettingsFlowProxyProvider(settingsRepository.proxySettings.flow, backgroundScope)
@@ -156,7 +158,7 @@ class SettingsViewModel : AbstractSettingsViewModel(), KoinComponent {
     // therefore requires both credential fields blank, not just the password.
     //
     // We borrow/returnClient around each probe rather than borrowForever:
-    // every click on "\u6D4B\u8BD5\u8FDE\u63A5" would otherwise pin a fresh client in the
+    // every click on "测试连接" would otherwise pin a fresh client in the
     // ref-counted pool until process exit, so after e.g. a proxy change the
     // old clients (with their sockets / threads) would accumulate.
     @OptIn(UnsafeScopedHttpClientApi::class)
@@ -216,6 +218,7 @@ class SettingsViewModel : AbstractSettingsViewModel(), KoinComponent {
         clientProvider = clientProvider,
         flowScope = backgroundScope,
         tmdbImageService = tmdbImageService,
+        bangumiEndpointProvider = bangumiEndpointProvider,
     )
 
     private val configureProxyUiState = combine(
