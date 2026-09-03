@@ -2,7 +2,7 @@
  * Copyright (C) 2024-2025 OpenAni and contributors.
  *
  * 此源代码的使用受 GNU AFFERO GENERAL PUBLIC LICENSE version 3 许可证的约束, 可以在以下链接找到该许可证.
- * Use of this source code is governed by the GNU AGPLv3 license, which can be found at the following link.
+ * Use of this source code is governed by the GNU AGPLv3 license, which can be found at the following link:
  *
  * https://github.com/open-ani/ani/blob/main/LICENSE
  */
@@ -24,6 +24,7 @@ import me.him188.ani.app.data.models.danmaku.DanmakuConfigSerializer
 import me.him188.ani.app.data.models.danmaku.DanmakuFilterConfig
 import me.him188.ani.app.data.models.preference.AnalyticsSettings
 import me.him188.ani.app.data.models.preference.AnitorrentConfig
+import me.him188.ani.app.data.models.preference.BangumiMirrorSettings
 import me.him188.ani.app.data.models.preference.DanmakuSettings
 import me.him188.ani.app.data.models.preference.DebugSettings
 import me.him188.ani.app.data.models.preference.MediaCacheSettings
@@ -93,6 +94,13 @@ interface SettingsRepository {
     val analyticsSettings: Settings<AnalyticsSettings>
     val debugSettings: Settings<DebugSettings>
     val watchTogetherSettings: Settings<WatchTogetherSettings>
+
+    /**
+     * Bangumi 镜像地址设置.
+     *
+     * @since 6.2.0
+     */
+    val bangumiMirrorSettings: Settings<BangumiMirrorSettings>
 }
 
 @Stable
@@ -275,6 +283,11 @@ class PreferencesRepositoryImpl(
         "watchTogetherSettings",
         WatchTogetherSettings.serializer(),
         default = { WatchTogetherSettings.Default },
+    )
+    override val bangumiMirrorSettings: Settings<BangumiMirrorSettings> = SerializablePreference(
+        "bangumiMirrorSettings",
+        BangumiMirrorSettings.serializer(),
+        default = { BangumiMirrorSettings.Default },
     )
 
     private companion object {

@@ -2,11 +2,10 @@
  * Copyright (C) 2024-2025 OpenAni and contributors.
  *
  * 此源代码的使用受 GNU AFFERO GENERAL PUBLIC LICENSE version 3 许可证的约束, 可以在以下链接找到该许可证.
- * Use of this source code is governed by the GNU AGPLv3 license, which can be found at the following link.
+ * Use of this source code is governed by the GNU AGPLv3 license, which can be found at the following link:
  *
  * https://github.com/open-ani/ani/blob/main/LICENSE
  */
-
 package me.him188.ani.datasources.bangumi
 
 import io.ktor.client.request.get
@@ -30,22 +29,22 @@ interface BangumiClient {
     suspend fun testConnectionNext(): ConnectionStatus
 }
 
-private const val BANGUMI_API_HOST = "https://api.bgm.tv"
-private const val BANGUMI_NEXT_API_HOST = "https://next.bgm.tv" // dev.bgm38.com for testing
-
 class BangumiClientImpl(
     /**
      * 不带 token, 所有请求都是匿名的
      */
     private val client: ScopedHttpClient,
+    /**
+     * Bangumi 端点提供者. 用于获取当前生效的 API / Next 域名 (支持镜像).
+     */
+    private val endpointProvider: BangumiEndpointProvider = DefaultBangumiEndpointProvider,
 ) : BangumiClient {
-
     override suspend fun testConnectionMaster(): ConnectionStatus {
-        return testConnection(BANGUMI_API_HOST)
+        return testConnection(endpointProvider.apiBaseUrl)
     }
 
     override suspend fun testConnectionNext(): ConnectionStatus {
-        return testConnection(BANGUMI_NEXT_API_HOST)
+        return testConnection(endpointProvider.nextBaseUrl)
     }
 
     private suspend fun testConnection(host: String): ConnectionStatus {
