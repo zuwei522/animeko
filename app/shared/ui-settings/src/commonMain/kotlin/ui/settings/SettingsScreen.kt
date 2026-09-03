@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2024-2026 OpenAni and contributors.
  *
- * 此源代码的使用受 GNU AFFERO GENERAL PUBLIC LICENSE version 3 许可证的约束, 可以在以下链接找到该许可证.
- * Use of this source code is governed by the GNU AGPLv3 license, which can be found at the following link.
+ * 此源代码的使用受 GNU AFFERO GENERAL PUBLIC LICENSE version 3 \u8BB8\u53EF\u8BC1\u7684\u7EA6\u675F, \u53EF\u4EE5\u5728\u4EE5\u4E0B\u94FE\u63A5\u627E\u5230\u8BE5\u8BB8\u53EF\u8BC1.
+ * Use of this source code is governed by the GNU AGPLv3 license, which can be found at the following link:
  *
  * https://github.com/open-ani/ani/blob/main/LICENSE
  */
@@ -178,13 +178,14 @@ import me.him188.ani.app.ui.settings.tabs.media.source.MediaSourceSubscriptionGr
 import me.him188.ani.app.ui.settings.tabs.media.source.rememberMediaSourceSelectionState
 import me.him188.ani.app.ui.settings.tabs.network.ConfigureProxyGroup
 import me.him188.ani.app.ui.settings.tabs.network.ServerSelectionGroup
+import me.him188.ani.app.ui.settings.tabs.network.BangumiMirrorSettingsGroup
 import me.him188.ani.app.ui.settings.tabs.theme.ThemeGroup
 import me.him188.ani.utils.platform.hasScrollingBug
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * @see getName 查看名称
+ * @see getName \u67E5\u770B\u540D\u79F0
  */
 typealias SettingsTab = me.him188.ani.app.navigation.SettingsTab
 
@@ -199,7 +200,7 @@ fun SettingsScreen(
     windowInsets: WindowInsets = AniWindowInsets.forColumnPageContent(),
     navigationIcon: @Composable () -> Unit = {},
 ) {
-    // 界面缩放改动后, 离开设置页时把窗口层 (弹窗/菜单) 一并对齐
+    // \u754C\u9762\u7F29\u653E\u6539\u52A8\u540E, \u79BB\u5F00\u8BBE\u7F6E\u9875\u65F6\u628A\u7A97\u53E3\u5C42 (\u5F39\u7A97/\u83DC\u5355) \u4E00\u5E76\u5BF9\u9F50
     UiScaleSyncEffect()
 
     val navigator: ThreePaneScaffoldNavigator<Nothing?> = rememberListDetailPaneScaffoldNavigator(
@@ -382,10 +383,17 @@ fun SettingsScreen(
 
                             SettingsTab.MEDIA_SELECTOR -> MediaSelectionGroup(vm.mediaSelectionGroupState)
                             SettingsTab.SERVER -> ServerSelectionGroup(vm.danmakuSettingsState, vm.danmakuServerTesters)
-                            SettingsTab.PROXY -> ConfigureProxyGroup(
-                                state = vm.configureProxyState,
-                                onStartProxyTestLoop = { vm.startProxyTesterLoop() },
-                            )
+                            SettingsTab.PROXY -> {
+                                ConfigureProxyGroup(
+                                    state = vm.configureProxyState,
+                                    onStartProxyTestLoop = { vm.startProxyTesterLoop() },
+                                )
+                                HorizontalDividerItem()
+                                BangumiMirrorSettingsGroup(
+                                    settings = vm.bangumiMirrorSettings,
+                                    backgroundScope = vm.backgroundScope,
+                                )
+                            }
 
                             SettingsTab.BT -> {
                                 TorrentEngineGroup(vm.torrentSettingsState)
@@ -418,8 +426,8 @@ fun SettingsScreen(
             }
         },
         detailPaneBottomBar = { currentTab, bottomBarInsets ->
-            // 浮动工具栏只给指针设备: 遥控器上够到屏幕底部这条要穿过整页设置项,
-            // 改成长按选中项出下拉菜单 (见 MediaSourceGroup)
+            // \u6D6E\u52A8\u5DE5\u5177\u680F\u53EA\u7ED9\u6307\u9488\u8BBE\u5907: \u9065\u63A7\u5668\u4E0A\u591F\u5230\u5E95\u90E8\u8FD9\u6761\u8981\u7A7F\u8FC7\u6574\u9875\u8BBE\u7F6E\u9879,
+            // \u6539\u6210\u957F\u6309\u9009\u4E2D\u9879\u51FA\u4E0B\u62C9\u83DC\u5355 (\u89C1 MediaSourceGroup)
             if (currentTab == SettingsTab.MEDIA_SOURCE && !LocalAniUiBehavior.current.focusDrivenNavigation) {
                 AniAnimatedVisibility(
                     visible = mediaSourceSelectionState.inSelection,
@@ -465,22 +473,22 @@ internal fun SettingsPageLayout(
     @Stable
     fun SettingsTab?.orDefault(): SettingsTab? {
         return if (layoutParametersState.preferSinglePane) {
-            // 单页模式, 自动选择传入的 tab
+            // \u5355\u9875\u6A21\u5F0F, \u81EA\u52A8\u9009\u62E9\u4F20\u5165\u7684 tab
             this
         } else {
-            // 双页模式, 默认选择第一个 tab, 以免右边很空
+            // \u53CC\u9875\u6A21\u5F0F, \u9ED8\u8BA4\u9009\u62E9\u7B2C\u4E00\u4E2A tab, \u4EE5\u514D\u53F3\u8FB9\u5F88\u7A7A
             this ?: SettingsTab.Default
         }
     }
 
-    // 毛玻璃模式下顶栏覆盖在内容上方并保持常驻, 以便展示模糊效果.
+    // \u6BDB\u73BB\u7483\u6A21\u5F0F\u4E0B\u9876\u680F\u8986\u76D6\u5728\u5185\u5BB9\u4E0A\u65B9\u5E76\u4FDD\u6301\u5E38\u9A7B, \u4EE5\u4FBF\u5C55\u793A\u6A21\u7CCA\u6548\u679C.
     val frostedGlassActive = isAppChromeFrostedGlassActive()
 
     val uiBehavior = LocalAniUiBehavior.current
 
-    // 遥控器: 详情栏按左键回到左侧导航的"当前选中项" (默认空间焦点搜索只找几何最近邻,
-    // 会落到没选中的项上). 请求器由 tabFocusTarget 挂在选中项上, 左侧导航列表 focusGroup
-    // 的 onEnter 负责重定向; slider 聚焦时左键被调值消费, 由返回键代替 (见 SliderItem).
+    // \u9065\u63A7\u5668: \u8BE6\u60C5\u680F\u6309\u5DE6\u952E\u56DE\u5230\u5DE6\u4FA7\u5BFC\u822A\u7684\u201C\u5F53\u524D\u9009\u4E2D\u9879\u201D (\u9ED8\u8BA4\u7A7A\u95F4\u7126\u70B9\u641C\u7D22\u53EA\u627E\u51E0\u4F55\u6700\u8FD1\u90BB,
+    // \u4F1A\u843D\u5230\u6CA1\u9009\u4E2D\u7684\u9879\u4E0A). \u8BF7\u6C42\u5668\u7531 tabFocusTarget \u6302\u5728\u9009\u4E2D\u9879\u4E0A, \u5DE6\u4FA7\u5BFC\u822A\u5217\u8868 focusGroup
+    // \u7684 onEnter \u8D1F\u8D23\u91CD\u5B9A\u5411; slider \u805A\u7126\u65F6\u5DE6\u952E\u88AB\u8C03\u503C\u6D88\u8D39, \u7531\u8FD4\u56DE\u952E\u4EE3\u66FF (\u89C1 SliderItem).
     val focusDriven = uiBehavior.focusDrivenNavigation
     val selectedNavItemFocus = remember { FocusRequester() }
 
@@ -538,11 +546,11 @@ internal fun SettingsPageLayout(
             size = topAppBarSize,
         )
     }
-    // 返回按钮隐藏时, 列表侧顶栏只剩"设置"标题占位, 整条不渲染
+    // \u8FD4\u56DE\u6309\u94AE\u9690\u85CF\u65F6, \u5217\u8868\u4FA7\u9876\u680F\u53EA\u5269\u201C\u8BBE\u7F6E\u201D\u6807\u9898\u5360\u4F4D, \u6574\u6761\u4E0D\u6E32\u67D3
     val hideNavigationTopAppBar = !uiBehavior.showNavigationTopAppBar
     AniListDetailPaneScaffold(
         navigator,
-        // 毛玻璃模式下顶栏由 listPaneContent 内部覆盖绘制.
+        // \u6BDB\u73BB\u7483\u6A21\u5F0F\u4E0B\u9876\u680F\u7531 listPaneContent \u5185\u90E8\u8986\u76D6\u7ED8\u5236.
         listPaneTopAppBar = if (frostedGlassActive || hideNavigationTopAppBar) null else listPaneTopAppBar,
         listPaneContent = paneScope@{
             var listTopAppBarHeight by remember { mutableStateOf(0) }
@@ -555,11 +563,11 @@ internal fun SettingsPageLayout(
                         .nestedScroll(listPaneTopAppBarScrollBehavior.nestedScrollConnection)
                         .verticalScroll(listPaneScrollState)
                         .ifThen(focusDriven) {
-                            // 遥控器: 从详情栏回到导航列表时, 焦点恢复到上次在列表里停留的项
-                            // (没有历史时才落到当前选中项), 而不是每次都拉回选中项或几何最近邻.
-                            // 注意不能反过来在详情侧包组拦 onExit: 方向搜索是分层的, 详情滚动
-                            // scope 内的兜底候选 (如调色板) 会把"向左"消化在组内, 离组钩子
-                            // 根本不触发.
+                            // \u9065\u63A7\u5668: \u4ECE\u8BE6\u60C5\u680F\u56DE\u5230\u5BFC\u822A\u5217\u8868\u65F6, \u7126\u70B9\u6062\u590D\u5230\u4E0A\u6B21\u5728\u5217\u8868\u91CC\u505C\u7559\u7684\u9879
+                            // (\u6CA1\u6709\u5386\u53F2\u65F6\u624D\u843D\u5230\u5F53\u524D\u9009\u4E2D\u9879), \u800C\u4E0D\u662F\u6BCF\u6B21\u90FD\u62C9\u56DE\u9009\u4E2D\u9879\u6216\u51E0\u4F55\u6700\u8FD1\u90BB.
+                            // \u6CE8\u610F\u4E0D\u80FD\u53CD\u8FC7\u6765\u5728\u8BE6\u60C5\u4FA7\u5305\u7EC4\u62E6 onExit: \u65B9\u5411\u641C\u7D22\u662F\u5206\u5C42\u7684, \u8BE6\u60C5\u9875\u6EDA\u52A8
+                            // scope \u5185\u7684\u515C\u5E95\u5019\u9009 (\u5982\u8C03\u8272\u677F) \u4F1A\u628A\u201C\u5411\u5DE6\u201D\u6D88\u5316\u5728\u7EC4\u5185, \u79BB\u7EC4\u94A9\u5B50
+                            // \u6839\u672C\u4E0D\u89E6\u53D1.
                             focusRestorer(fallback = selectedNavItemFocus).focusGroup()
                         },
                     drawerContainerColor = Color.Unspecified,
@@ -581,8 +589,8 @@ internal fun SettingsPageLayout(
                             }
 
                             override fun Modifier.tabFocusTarget(tab: SettingsTab): Modifier =
-                                // 兜底到默认 tab: focusRestorer 的 fallback 会无条件 requestFocus,
-                                // 请求器必须始终挂在某个节点上, 否则未选中任何 tab 的首帧会抛异常
+                                // \u515C\u5E95\u5230\u9ED8\u8BA4 tab: focusRestorer \u7684 fallback \u4F1A\u65E0\u6761\u4EF6 requestFocus,
+                                // \u8BF7\u6C42\u5668\u5FC5\u987B\u59CB\u7EC8\u6302\u5728\u67D0\u4E2A\u8282\u70B9\u4E0A, \u5426\u5219\u672A\u9009\u4E2D\u4EFB\u4F55 tab \u7684\u9996\u5E27\u4F1A\u629B\u5F02\u5E38
                                 ifThen(tab == (currentTab() ?: SettingsTab.Default)) {
                                     focusRequester(selectedNavItemFocus)
                                 }
@@ -592,7 +600,7 @@ internal fun SettingsPageLayout(
 
                     val verticalPadding = currentWindowAdaptiveInfo1().windowSizeClass.paneVerticalPadding
 
-                    // 毛玻璃顶栏覆盖在内容上方时, 在滚动内容顶部留出顶栏的空间.
+                    // \u6BDB\u73BB\u7483\u9876\u680F\u8986\u76D6\u5728\u5185\u5BB9\u4E0A\u65B9\u65F6, \u5728\u6EDA\u52A8\u5185\u5BB9\u9876\u90E8\u7559\u51FA\u9876\u680F\u7684\u7A7A\u95F4.
                     if (frostedGlassActive) {
                         Spacer(Modifier.height(with(LocalDensity.current) { listTopAppBarHeight.toDp() })) // scrollable
                     }
@@ -607,7 +615,7 @@ internal fun SettingsPageLayout(
                     Box(
                         Modifier
                             .fillMaxSize()
-                            // 顶栏覆盖在内容上, 这里代替 scaffold 消耗顶栏的 insets.
+                            // \u9876\u680F\u8986\u76D6\u5728\u5185\u5BB9\u4E0A, \u8FD9\u91CC\u4EE3\u66FF scaffold \u6D88\u8017\u9876\u680F\u7684 insets.
                             .consumeWindowInsets(paneContentWindowInsets.only(WindowInsetsSides.Top))
                             .appChromeHazeSource(backgroundColor = containerColor),
                     ) {
@@ -643,7 +651,7 @@ internal fun SettingsPageLayout(
                 val detailPaneBackStack = rememberSaveable(saver = DetailPaneBackStackSaver) {
                     mutableStateListOf<DetailPaneRoutes>(DetailPaneRoutes.Main)
                 }
-                // 栈底的 Main 不能被弹出, 空栈会让 NavDisplay 抛异常
+                // \u6808\u5E95\u7684 Main \u4E0D\u80FD\u88AB\u5F39\u51FA, \u7A7A\u6808\u4F1A\u8BA9 NavDisplay \u629B\u5F02\u5E38
                 val navigateUp: () -> Unit = {
                     if (detailPaneBackStack.size > 1) {
                         detailPaneBackStack.removeAt(detailPaneBackStack.lastIndex)
@@ -659,7 +667,7 @@ internal fun SettingsPageLayout(
                     val scope = remember(paneScope, detailPaneBackStack) {
                         object : SettingsDetailPaneScope, PaneScope by paneScope {
                             override fun navigateTo(route: DetailPaneRoutes) {
-                                // 同一个页面重复入栈会让栈里出现相同的 key, NavDisplay 不允许
+                                // \u540C\u4E00\u4E2A\u9875\u9762\u91CD\u590D\u5165\u6808\u4F1A\u8BA9\u6808\u91CC\u51FA\u73B0\u76F8\u540C\u7684 key, NavDisplay \u4E0D\u5141\u8BB8
                                 if (detailPaneBackStack.lastOrNull() != route) {
                                     detailPaneBackStack.add(route)
                                 }
@@ -678,11 +686,11 @@ internal fun SettingsPageLayout(
                                 verticalScroll(rememberScrollState())
                             }
                             .ifThen(focusDriven) {
-                                // 与左栏对称的停留历史: 从左栏回到详情栏时恢复上次聚焦的设置项,
-                                // 无历史 (首次进入/切了 tab 原节点已不在) 时走默认空间进入.
-                                // 必须挂在 verticalScroll 之后 (滚动 scope 之内): 滚动容器自带
-                                // 焦点节点, restorer 的存/取只看直接子焦点节点, 包在滚动外面
-                                // 存到的是滚动节点本身, 恢复不了具体条目.
+                                // \u4E0E\u5DE6\u680F\u5BF9\u79F0\u7684\u505C\u7559\u5386\u53F2: \u4ECE\u5DE6\u680F\u56DE\u5230\u8BE6\u60C5\u680F\u65F6\u6062\u590D\u4E0A\u6B21\u805A\u7126\u7684\u8BBE\u7F6E\u9879,
+                                // \u65E0\u5386\u53F2 (\u9996\u6B21\u8FDB\u5165/\u5207\u4E86 tab \u539F\u8282\u70B9\u5DF2\u4E0D\u5728) \u65F6\u8D70\u9ED8\u8BA4\u7A7A\u95F4\u8FDB\u5165.
+                                // \u5FC5\u987B\u6302\u5728 verticalScroll \u4E4B\u540E (\u6EDA\u52A8 scope \u4E4B\u5185): \u6EDA\u52A8\u5BB9\u5668\u81EA\u5E26
+                                // \u7126\u70B9\u8282\u70B9, restorer \u7684\u5B58/\u53D6\u53EA\u770B\u76F4\u63A5\u5B50\u7126\u70B9\u8282\u70B9, \u5305\u5728\u6EDA\u52A8\u5916\u9762
+                                // \u5B58\u5230\u7684\u662F\u6EDA\u52A8\u8282\u70B9\u672C\u8EAB, \u6062\u590D\u4E0D\u4E86\u5177\u4F53\u6761\u76EE.
                                 focusRestorer().focusGroup()
                             }
                             .padding(horizontal = SettingsScope.itemExtraHorizontalPadding)
@@ -690,7 +698,7 @@ internal fun SettingsPageLayout(
                             .wrapContentWidth()
                             .widthIn(max = 1000.dp),
                     ) {
-                        // 毛玻璃顶栏覆盖在内容上方时, 在滚动内容顶部留出顶栏的空间
+                        // \u6BDB\u73BB\u7483\u9876\u680F\u8986\u76D6\u5728\u5185\u5BB9\u4E0A\u65B9\u65F6, \u5728\u6EDA\u52A8\u5185\u5BB9\u9876\u90E8\u7559\u51FA\u9876\u680F\u7684\u7A7A\u95F4
                         val topAppBarUnderlapHeight = LocalSettingsTopAppBarUnderlapHeight.current
                         if (topAppBarUnderlapHeight > 0) {
                             Spacer(Modifier.height(with(LocalDensity.current) { topAppBarUnderlapHeight.toDp() }))
@@ -700,7 +708,7 @@ internal fun SettingsPageLayout(
                             scope.content()
                         }
 
-                        // 滚动容器底部留出安全区域
+                        // \u6EDA\u52A8\u5BB9\u5668\u5E95\u90E8\u7559\u51FA\u5B89\u5168\u533A\u57DF
                         Spacer(
                             Modifier.windowInsetsBottomHeight(
                                 AniWindowInsets.safeDrawing,
@@ -809,7 +817,7 @@ internal fun SettingsPageLayout(
                             },
                             detailPaneTopAppBarScrollBehavior,
                         ) {
-                            // LibrariesContainer 自带 LazyColumn, 不能套在 verticalScroll 里
+                            // LibrariesContainer \u81EA\u5E26 LazyColumn, \u4E0D\u80FD\u5957\u5728 verticalScroll \u91CC
                             RouteContent(scrollable = false) {
                                 OpenSourceLibrariesTab(
                                     loadOpenSourceLibrariesJsons,
@@ -843,7 +851,7 @@ internal fun SettingsPageLayout(
                         DetailPaneRoute(
                             topAppBar = {
                                 AniTopAppBar(
-                                    title = { AniTopAppBarDefaults.Title("Bangumi 同步") },
+                                    title = { AniTopAppBarDefaults.Title("Bangumi \u540C\u6B65") },
                                     navigationIcon = {
                                         BackNavigationIconButton(navigateUp)
                                     },
@@ -871,7 +879,7 @@ internal fun SettingsPageLayout(
 }
 
 /**
- * 设置页自带一个独立的毛玻璃作用域: 启用毛玻璃时, 顶栏模糊其下方滚动的内容.
+ * \u8BBE\u7F6E\u9875\u81EA\u5E26\u4E00\u4E2A\u72EC\u7ACB\u7684\u6BDB\u73BB\u7483\u4F5C\u7528\u57DF: \u542F\u7528\u6BDB\u73BB\u7483\u65F6, \u9876\u680F\u6A21\u7CCA\u5176\u4E0B\u65B9\u6EDA\u52A8\u7684\u5185\u5BB9.
  */
 @Composable
 private fun SettingsPageSurface(containerColor: Color, content: @Composable () -> Unit) {
@@ -881,21 +889,21 @@ private fun SettingsPageSurface(containerColor: Color, content: @Composable () -
 }
 
 /**
- * 毛玻璃顶栏覆盖在 pane 内容上方时, 滚动内容需要在顶部留出的空间 (px).
+ * \u6BDB\u73BB\u7483\u9876\u680F\u8986\u76D6\u5728 pane \u5185\u5BB9\u4E0A\u65B9\u65F6, \u6EDA\u52A8\u5185\u5BB9\u9700\u8981\u5728\u9876\u90E8\u7559\u51FA\u7684\u7A7A\u95F4 (px).
  *
- * 不启用毛玻璃时为 0.
+ * \u4E0D\u542F\u7528\u6BDB\u73BB\u7483\u65F6\u4E3A 0.
  */
 private val LocalSettingsTopAppBarUnderlapHeight = compositionLocalOf { 0 }
 
 @Stable
 interface SettingsDetailPaneScope : PaneScope {
     /**
-     * 在详情页内部导航到 [route]. 如果它已经在栈顶则不做任何操作.
+     * \u5728\u8BE6\u60C5\u9875\u5185\u90E8\u5BFC\u822A\u5230 [route]. \u5982\u679C\u5B83\u5DF2\u7ECF\u5728\u6808\u9876\u5219\u4E0D\u505A\u4EFB\u4F55\u64CD\u4F5C.
      */
     fun navigateTo(route: DetailPaneRoutes)
 
     /**
-     * 返回详情页内部的上一页. 已经在 [DetailPaneRoutes.Main] 时不做任何操作.
+     * \u8FD4\u56DE\u8BE6\u60C5\u9875\u5185\u90E8\u7684\u4E0A\u4E00\u9875. \u5DF2\u7ECF\u5728 [DetailPaneRoutes.Main] \u65F6\u4E0D\u505A\u4EFB\u4F55\u64CD\u4F5C.
      */
     fun navigateUp()
 }
@@ -908,13 +916,13 @@ private fun PaneScope.DetailPaneRoute(
     floatingContent: @Composable BoxScope.() -> Unit = {},
     tabContent: @Composable (PaneScope.() -> Unit),
 ) {
-    // 返回按钮隐藏时, 详情侧顶栏只剩标题占位, 整条不渲染 (当前分类由左侧导航项高亮承担)
+    // \u8FD4\u56DE\u6309\u94AE\u9690\u85CF\u65F6, \u8BE6\u60C5\u4FA7\u9876\u680F\u53EA\u5269\u6807\u9898\u5360\u4F4D, \u6574\u6761\u4E0D\u6E32\u67D3 (\u5F53\u524D\u5206\u7C7B\u7531\u5DE6\u4FA7\u5BFC\u822A\u9879\u9AD8\u4EAE\u627F\u62C5)
     @Suppress("NAME_SHADOWING")
     val topAppBar: @Composable () -> Unit =
         if (LocalAniUiBehavior.current.showNavigationTopAppBar) topAppBar else ({})
     if (isAppChromeFrostedGlassActive()) {
-        // 毛玻璃: 顶栏覆盖在内容上方, 内容从顶栏下方滚过并被模糊.
-        // 内容通过 LocalSettingsTopAppBarUnderlapHeight 在滚动内容顶部留出顶栏的空间.
+        // \u6BDB\u73BB\u7483: \u9876\u680F\u8986\u76D6\u5728\u5185\u5BB9\u4E0A\u65B9, \u5185\u5BB9\u4ECE\u9876\u680F\u4E0B\u65B9\u6EDA\u8FC7\u5E76\u88AB\u6A21\u7CCA.
+        // \u5185\u5BB9\u901A\u8FC7 LocalSettingsTopAppBarUnderlapHeight \u5728\u6EDA\u52A8\u5185\u5BB9\u9876\u90E8\u7559\u51FA\u9876\u680F\u7684\u7A7A\u95F4.
         var topAppBarHeight by remember { mutableStateOf(0) }
         Box(modifier) {
             Box(
@@ -970,7 +978,7 @@ private fun PaneScope.DetailPaneRoute(
 }
 
 /**
- * 设置详情页内部的导航目标. 栈底总是 [Main].
+ * \u8BBE\u7F6E\u8BE6\u60C5\u9875\u5185\u90E8\u7684\u5BFC\u822A\u76EE\u6807. \u6808\u5E95\u603B\u662F [Main].
  */
 @Serializable
 sealed class DetailPaneRoutes : NavKey {
@@ -993,7 +1001,7 @@ sealed class DetailPaneRoutes : NavKey {
 private val DetailPaneBackStackSaver: Saver<SnapshotStateList<DetailPaneRoutes>, Any> = listSaver(
     save = { stack -> stack.map { it::class.simpleName ?: "Main" } },
     restore = { saved ->
-        // 空栈会让 NavDisplay 抛异常, 此时放弃恢复
+        // \u7A7A\u6808\u4F1A\u8BA9 NavDisplay \u629B\u5F02\u5E38, \u6B64\u65F6\u653E\u5F03\u6062\u590D
         if (saved.isEmpty()) {
             null
         } else {
@@ -1016,9 +1024,9 @@ abstract class SettingsDrawerScope internal constructor() : ColumnScope {
     abstract fun Item(item: SettingsTab)
 
     /**
-     * 把此节点标记为 [tab] 选中时的焦点回归目标: 遥控器上详情栏按左键跳回它.
-     * [tab] 非当前选中项时无效果. [Item] 已自动挂载, 列表里不经 [Item] 渲染的入口
-     * (如账号横幅) 需要自行挂到可聚焦的根 modifier 上.
+     * \u628A\u6B64\u8282\u70B9\u6807\u8BB0\u4E3A [tab] \u9009\u4E2D\u65F6\u7684\u7126\u70B9\u56DE\u5F52\u76EE\u6807: \u9065\u63A7\u5668\u4E0A\u8BE6\u60C5\u680F\u6309\u5DE6\u952E\u8DF3\u56DE\u5B83.
+     * [tab] \u975E\u5F53\u524D\u9009\u4E2D\u9879\u65F6\u65E0\u6548\u679C. [Item] \u5DF2\u81EA\u52A8\u6302\u8F7D, \u5217\u8868\u91CC\u4E0D\u7ECF [Item] \u6E32\u67D3\u7684\u5165\u53E3
+     * (\u5982\u8D26\u53F7\u6A2A\u5E45) \u9700\u8981\u81EA\u884C\u6302\u5230\u53EF\u805A\u7126\u7684\u6839 modifier \u4E0A.
      */
     abstract fun Modifier.tabFocusTarget(tab: SettingsTab): Modifier
 
@@ -1047,7 +1055,7 @@ private fun getIcon(tab: SettingsTab): ImageVector {
         SettingsTab.SERVER -> Icons.Outlined.Public
         SettingsTab.PROXY -> Icons.Outlined.VpnKey
         SettingsTab.BT -> Icons.Filled.P2p
-//        SettingsTab.CACHE -> Icons.Rounded.Download // Icons.Outlined.Download 太 sharp 了
+//        SettingsTab.CACHE -> Icons.Rounded.Download // Icons.Outlined.Download \u592A sharp \u4E86
         SettingsTab.STORAGE -> Icons.Outlined.Storage
         SettingsTab.SETTINGS_BACKUP -> Icons.Outlined.Settings
         SettingsTab.ABOUT -> Icons.Outlined.Info
