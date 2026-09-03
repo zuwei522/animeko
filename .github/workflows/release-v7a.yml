@@ -117,7 +117,7 @@ jobs:
             animeko-tv-armeabi-v7a-debug.apk
             animeko-tv-armeabi-v7a-debug.apk.sha256
           overwrite: 'true'
-          retention-days: 60
+          retention-days: 7
 
       - name: 'Publish / update rolling pre-release'
         uses: 'softprops/action-gh-release@v2'
