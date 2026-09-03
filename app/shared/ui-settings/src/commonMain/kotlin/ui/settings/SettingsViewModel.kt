@@ -64,6 +64,7 @@ import me.him188.ani.app.domain.settings.ProxySettingsFlowProxyProvider
 import me.him188.ani.app.domain.settings.ProxyTester
 import me.him188.ani.app.domain.settings.ServiceConnectionTester
 import me.him188.ani.app.domain.settings.ServiceConnectionTesters
+import me.him188.ani.datasources.bangumi.BangumiEndpointProvider
 import me.him188.ani.app.platform.PermissionManager
 import me.him188.ani.app.platform.currentAniBuildConfig
 import me.him188.ani.app.ui.foundation.launchInBackground
@@ -112,6 +113,7 @@ class SettingsViewModel : AbstractSettingsViewModel(), KoinComponent {
     private val mediaSourceCodecManager: MediaSourceCodecManager by inject()
     private val clientProvider: HttpClientProvider by inject()
     private val tmdbImageService: TmdbImageService by inject()
+    private val bangumiEndpointProvider: BangumiEndpointProvider by inject()
     private val tokenRepository: TokenRepository by inject()
 
     private val proxyProvider = ProxySettingsFlowProxyProvider(settingsRepository.proxySettings.flow, backgroundScope)
@@ -216,6 +218,7 @@ class SettingsViewModel : AbstractSettingsViewModel(), KoinComponent {
         clientProvider = clientProvider,
         flowScope = backgroundScope,
         tmdbImageService = tmdbImageService,
+        bangumiEndpointProvider = bangumiEndpointProvider,
     )
 
     private val configureProxyUiState = combine(
