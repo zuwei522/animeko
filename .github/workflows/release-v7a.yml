@@ -1,0 +1,143 @@
+# Animeko TV (fork) - 在 release 分支推送时构建 armeabi-v7a Debug APK.
+#
+# 设计说明:
+# - 只构建 TV flavor (DefaultTv) 的 Debug 包, Debug 使用 AGP 自带 debug 密钥签名, 无需任何签名 secret.
+# - 仅打包 armeabi-v7a 一个 ABI (通过 local.properties 的 ani.android.abis 指定).
+# - 产物同时: 1) 上传为 Actions artifact; 2) 发布/更新到一个滚动预发布 tag `tv-v7a-latest`, 方便直接下载.
+# - 步骤与已验证的 fork-release.yml 保持一致 (SDK 37 / JBR21 / mock google-services.json / 10G swap).
+name: 'Build TV APK (armeabi-v7a)'
+
+on:
+  push:
+    branches:
+      - 'release'
+  workflow_dispatch: {}
+
+permissions:
+  contents: 'write'   # 发布滚动预发布需要
+
+jobs:
+  build_tv_v7a:
+    name: 'Build DefaultTv Debug (armeabi-v7a)'
+    runs-on: 'ubuntu-24.04'
+    steps:
+      - name: 'Checkout (with submodules)'
+        uses: 'actions/checkout@v4'
+        with:
+          submodules: 'recursive'
+
+      - name: 'Free space for Ubuntu'
+        uses: 'jlumbroso/free-disk-space@v1.3.1'
+        with:
+          android: 'false'
+          large-packages: 'false'
+          tool-cache: 'false'
+
+      - name: 'Enable Swap'
+        run: |-
+          sudo fallocate -l 10G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+
+      - name: 'Prepare local.properties'
+        run: |-
+          rm -f local.properties
+          # 只构建 armeabi-v7a
+          echo "ani.android.abis=armeabi-v7a" >> local.properties
+          echo "ani.enable.firebase=false" >> local.properties
+          echo "kotlin.native.ignoreDisabledTargets=true" >> local.properties
+          echo "jvm.toolchain.version=21" >> local.properties
+          echo "---- local.properties ----"
+          cat local.properties
+
+      # 与 fork-release.yml 一致: runner 镜像不带 compileSdk 用的 platform;
+      # API 37 起 platform 包 id 带 minor version (android-37.0).
+      - name: 'Setup Android SDK'
+        uses: 'android-actions/setup-android@v3'
+        with:
+          accept-android-sdk-licenses: 'true'
+          packages: 'platform-tools platforms;android-37.0 build-tools;36.0.0'
+
+      - name: 'Get JBR (Linux)'
+        id: 'get-jbr'
+        env:
+          RUNNER_TOOL_CACHE: '${{ runner.tool_cache }}'
+          JBR_URL: 'https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk_jcef-21.0.5-linux-x64-b750.29.tar.gz'
+          JBR_CHECKSUM_URL: 'https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk_jcef-21.0.5-linux-x64-b750.29.tar.gz.checksum'
+        shell: 'bash'
+        run: 'python .github/workflows/download_jbr.py'
+
+      - name: 'Setup JBR 21'
+        uses: 'gmitch215/setup-java@6d2c5e1f82f180ae79f799f0ed6e3e5efb4e664d'
+        with:
+          java-version: '21'
+          distribution: 'jdkfile'
+          jdkFile: '${{ steps.get-jbr.outputs.jbrLocation }}'
+        id: 'get-jbr-setup'
+        env:
+          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+
+      - name: 'Generate Mock google-services.json'
+        run: |
+          echo '{"project_info":{"project_number":"0","project_id":"mock-project","storage_bucket":"mock-bucket"},"client":[{"client_info":{"mobilesdk_app_id":"1:123456789012:android:0000000000000000","android_client_info":{"package_name":"me.him188.ani"}},"api_key":[{"current_key":"mock_key"}]},{"client_info":{"mobilesdk_app_id":"1:123456789012:android:0000000000000001","android_client_info":{"package_name":"me.him188.ani.tv"}},"api_key":[{"current_key":"mock_key"}]}]}' > ./app/android/google-services.json
+
+      - name: 'Fix permissions'
+        run: 'chmod -R 777 .'
+
+      - name: 'Setup Gradle'
+        uses: 'gradle/actions/setup-gradle@v3'
+        with:
+          cache-disabled: 'true'
+
+      - name: 'Build DefaultTv Debug APK (armeabi-v7a)'
+        timeout-minutes: 240
+        run: >-
+          ./gradlew assembleDefaultTvDebug
+          --stacktrace
+          "-Porg.gradle.daemon.idletimeout=60000"
+          "-Dfile.encoding=UTF-8"
+          "-Dorg.gradle.jvmargs=-Xmx8g -Dkotlin.daemon.jvm.options=-Xmx6g"
+          "-Dkotlin.daemon.jvm.options=-Xmx6g"
+
+      - name: 'Rename APK'
+        run: |-
+          set -e
+          APK_SRC="app/android/build/outputs/apk/defaultTv/debug/android-default-tv-armeabi-v7a-debug.apk"
+          ls -lh app/android/build/outputs/apk/defaultTv/debug/ || true
+          test -f "$APK_SRC"
+          cp "$APK_SRC" "animeko-tv-armeabi-v7a-debug.apk"
+          sha256sum "animeko-tv-armeabi-v7a-debug.apk" | tee "animeko-tv-armeabi-v7a-debug.apk.sha256"
+
+      - name: 'Upload Artifact'
+        uses: 'actions/upload-artifact@v4'
+        with:
+          name: 'animeko-tv-armeabi-v7a-debug'
+          path: |
+            animeko-tv-armeabi-v7a-debug.apk
+            animeko-tv-armeabi-v7a-debug.apk.sha256
+          overwrite: 'true'
+          retention-days: 60
+
+      - name: 'Publish / update rolling pre-release'
+        uses: 'softprops/action-gh-release@v2'
+        with:
+          tag_name: 'tv-v7a-latest'
+          name: 'Animeko TV armeabi-v7a (CI 最新构建)'
+          prerelease: true
+          make_latest: 'false'
+          body: |
+            ## 自动构建的 Animeko TV Debug 安装包 (armeabi-v7a)
+
+            - 触发分支: `${{ github.ref_name }}`
+            - 提交: `${{ github.sha }}`
+            - 提交信息: ${{ github.event.head_commit.message }}
+            - ABI: armeabi-v7a (32 位 ARM)
+            - 类型: Debug, 使用 debug 密钥签名, 可直接安装
+
+            下载 `animeko-tv-armeabi-v7a-debug.apk` 安装即可。每次向 `release` 分支推送都会自动刷新本页面。
+          files: |
+            animeko-tv-armeabi-v7a-debug.apk
+            animeko-tv-armeabi-v7a-debug.apk.sha256
+        env:
+          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
