@@ -2,7 +2,7 @@
  * Copyright (C) 2024-2026 OpenAni and contributors.
  *
  * 此源代码的使用受 GNU AFFERO GENERAL PUBLIC LICENSE version 3 许可证的约束, 可以在以下链接找到该许可证.
- * Use of this source code is governed by the GNU AGPLv3 license, which can be found at the following link.
+ * Use of this source code is governed by the GNU AGPLv3 license, which can be found at the following link:
  *
  * https://github.com/open-ani/ani/blob/main/LICENSE
  */
@@ -43,6 +43,7 @@ import me.him188.ani.app.data.network.EpisodeService
 import me.him188.ani.app.data.network.EpisodeServiceImpl
 import me.him188.ani.app.data.network.RecommendationRepository
 import me.him188.ani.app.data.network.RemoteSubjectService
+import me.him188.ani.app.data.network.SettingsBangumiEndpointProvider
 import me.him188.ani.app.data.network.SubjectService
 import me.him188.ani.app.data.network.TrendsRepository
 import me.him188.ani.app.data.network.WatchTogetherApiService
@@ -140,6 +141,8 @@ import me.him188.ani.app.domain.session.SessionManager
 import me.him188.ani.app.domain.session.SessionStateProvider
 import me.him188.ani.app.domain.settings.ProxyProvider
 import me.him188.ani.app.domain.settings.SettingsBasedProxyProvider
+import me.him188.ani.app.domain.settings.BangumiMirrorProvider
+import me.him188.ani.app.domain.settings.SettingsBasedBangumiMirrorProvider
 import me.him188.ani.app.domain.torrent.TorrentManager
 import me.him188.ani.app.domain.update.UpdateManager
 import me.him188.ani.app.domain.watchtogether.LocalPlaybackBridge
@@ -148,8 +151,10 @@ import me.him188.ani.app.domain.watchtogether.WatchTogetherManager
 import me.him188.ani.app.domain.usecase.useCaseModules
 import me.him188.ani.app.ui.subject.details.state.DefaultSubjectDetailsStateFactory
 import me.him188.ani.app.ui.subject.details.state.SubjectDetailsStateFactory
+import me.him188.ani.app.ui.comment.BangumiStickers
 import me.him188.ani.datasources.bangumi.BangumiClient
 import me.him188.ani.datasources.bangumi.BangumiClientImpl
+import me.him188.ani.datasources.bangumi.BangumiEndpointProvider
 import me.him188.ani.utils.coroutines.IO_
 import me.him188.ani.utils.coroutines.childScope
 import me.him188.ani.utils.coroutines.childScopeContext
@@ -173,6 +178,8 @@ fun KoinApplication.getCommonKoinModule(getContext: () -> Context, coroutineScop
 private fun KoinApplication.otherModules(getContext: () -> Context, coroutineScope: CoroutineScope) = module {
     // Repositories
     single<ProxyProvider> { SettingsBasedProxyProvider(get(), coroutineScope) }
+    single<BangumiMirrorProvider> { SettingsBasedBangumiMirrorProvider(get(), coroutineScope) }
+    single<BangumiEndpointProvider> { SettingsBangumiEndpointProvider(get(), coroutineScope) }
     single<SessionManager> {
         SessionManager(
             tokenRepository = get(),
@@ -209,12 +216,12 @@ private fun KoinApplication.otherModules(getContext: () -> Context, coroutineSco
                 ConvertSendCountExceedExceptionFeatureHandler,
                 VersionExpiryFeatureHandler, // handle 426 Upgrade Required -> show blocking dialog
                 SseFeatureHandler,
-                CookieJarFeatureHandler, // web 数据源统一 cookie jar (构造时注入)
-                WebSourceIdentityFeatureHandler, // web 数据源 per-host UA 对齐
+                CookieJarFeatureHandler, // web \u6570\u636E\u6E90\u7EDF\u4E00 cookie jar (\u6784\u9020\u65F6\u6CE8\u5165)
+                WebSourceIdentityFeatureHandler, // web \u6570\u636E\u6E90 per-host UA \u5BF9\u9F50
             ),
         )
     }
-    // Web 数据源验证码处理 (docs/dev/media/web-captcha.md)
+    // Web \u6570\u636E\u6E90\u9A8C\u8BC1\u7801\u5904\u7406 (docs/dev/media/web-captcha.md)
     single<WebSourceCookieJar> { WebSourceCookieJar() }
     single<WebSourceIdentityRegistry> { WebSourceIdentityRegistry() }
     single<WebSessionManager> {
@@ -285,6 +292,7 @@ private fun KoinApplication.otherModules(getContext: () -> Context, coroutineSco
             get<HttpClientProvider>().get(
                 userAgent = ScopedHttpClientUserAgent.ANI,
             ),
+            endpointProvider = get(),
         )
     }
 
@@ -388,9 +396,9 @@ private fun KoinApplication.otherModules(getContext: () -> Context, coroutineSco
     single<BangumiCommentService> { BangumiBangumiCommentServiceImpl(get<AniApiProvider>().subjectApi) }
     single<AniEpisodeCommentService> { AniEpisodeCommentService(get<AniApiProvider>().episodesApi) }
     single<AniCommentReportService> { AniCommentReportService(get<AniApiProvider>().commentsApi) }
-    // 匿名客户端 (与 BangumiClient 同一个): 只读公开的评论关系, 不带任何 token
+    // \u533F\u540D\u5BA2\u6237\u7AEF (\u4E0E BangumiClient \u540C\u4E00\u4E2A): \u53EA\u8BFB\u516C\u5F00\u7684\u8BC4\u8BBA\u5173\u7CFB, \u4E0D\u5E26\u4EFB\u4F55 token
     single<BangumiReplyRelationService> {
-        BangumiReplyRelationService(get<HttpClientProvider>().get(userAgent = ScopedHttpClientUserAgent.ANI))
+        BangumiReplyRelationService(get<HttpClientProvider>().get(userAgent = ScopedHttpClientUserAgent.ANI), mirrorProvider = get())
     }
     single<EpisodeCommentRepository> {
         EpisodeCommentRepository(aniCommentService = get(), replyRelationService = get())
@@ -431,7 +439,7 @@ private fun KoinApplication.otherModules(getContext: () -> Context, coroutineSco
     }
     single<AnimeScheduleService> { AnimeScheduleService(get<AniApiProvider>().scheduleApi) }
     single<TmdbImageService> { TmdbImageService(get(), getContext().dataStores.tmdbImageCacheStore) }
-    single<BangumiSummaryService> { BangumiSummaryService(get()) }
+    single<BangumiSummaryService> { BangumiSummaryService(get(), mirrorProvider = get()) }
     single<TrendsRepository> { TrendsRepository(get<AniApiProvider>().trendsApi) }
     single<RecommendationRepository> { RecommendationRepository(get<AniApiProvider>().homeApi) }
     single<AutoSkipRepository> { AutoSkipRepository(get<AniApiProvider>().episodesApi) }
@@ -478,7 +486,7 @@ private fun KoinApplication.otherModules(getContext: () -> Context, coroutineSco
             fileSystem = SystemFileSystem,
             baseSaveDir = get<MediaSaveDirProvider>().saveDir
                 .let { Path(it).resolve(HttpMediaCacheEngine.MEDIA_CACHE_DIR) },
-            // 专用低优先级线程, 不与驱动界面的数据流抢协程池 (见 createCacheDownloadDispatcher)
+            // \u4E13\u7528\u4F4E\u4F18\u5148\u7EA7\u7EBF\u7A0B, \u4E0D\u4E0E\u9A71\u52A8\u754C\u9762\u7684\u6570\u636E\u6D41\u62A2\u534F\u7A0B\u6C60 (\u89C1 createCacheDownloadDispatcher)
             ioDispatcher = createCacheDownloadDispatcher(),
             scope = coroutineScope,
         )
@@ -492,19 +500,6 @@ private fun KoinApplication.otherModules(getContext: () -> Context, coroutineSco
 
         MediaCacheManagerImpl(
             storagesIncludingDisabled = buildList(capacity = engines.size) {
-                /*if (currentAniBuildConfig.isDebug) {
-                    // 注意, 这个必须要在第一个, 见 [DefaultTorrentManager.engines] 注释
-                    add(
-                        @Suppress("DEPRECATION")
-                        TorrentMediaCacheStorage(
-                            mediaSourceId = "test-in-memory",
-                            store = metadataStore,
-                            engine = DummyMediaCacheEngine("test-in-memory"),
-                            "[debug]dummy",
-                            coroutineScope.childScopeContext(),
-                        ),
-                    )
-                }*/
                 for (engine in engines) {
                     add(
                         @Suppress("DEPRECATION")
@@ -576,7 +571,7 @@ private fun KoinApplication.otherModules(getContext: () -> Context, coroutineSco
 }
 
 /**
- * 会在非 preview 环境调用. 用来初始化一些模块
+ * \u4F1A\u5728\u975E preview \u73AF\u5883\u8C03\u7528. \u7528\u6765\u521D\u59CB\u5316\u4E00\u4E9B\u6A21\u5757
  */
 fun KoinApplication.startCommonKoinModule(
     context: Context,
@@ -593,6 +588,17 @@ fun KoinApplication.startCommonKoinModule(
     }
     // Now, the proxy settings is ready. Other components can use http clients.
 
+    // \u914D\u7F6E Bangumi \u8868\u60C5\u56FE\u7247\u7AD9\u7684\u955C\u50CF\u5730\u5740, \u5E76\u76D1\u542C\u8BBE\u7F6E\u53D8\u5316\u52A8\u6001\u66F4\u65B0
+    runBlocking {
+        val mirrorSettings = koin.get<BangumiMirrorProvider>().settings.first()
+        BangumiStickers.configureImageHost(mirrorSettings.lainBaseUrl)
+    }
+    coroutineScope.launch {
+        koin.get<BangumiMirrorProvider>().settings.collect { settings ->
+            BangumiStickers.configureImageHost(settings.lainBaseUrl)
+        }
+    }
+
     coroutineScope.launch {
         koin.get<HttpDownloader>().init() // restore http download states first
         val manager = koin.get<MediaCacheManager>()
@@ -605,7 +611,7 @@ fun KoinApplication.startCommonKoinModule(
         val subscriptionUpdater = koin.get<MediaSourceSubscriptionUpdater>()
         while (currentCoroutineContext().isActive) {
             val nextDelay = subscriptionUpdater.updateAllOutdated()
-            // updateAllOutdated 失败后会返回很短的重试间隔 (启动头几秒网络还没就绪是常态), 这里只兜底防止空转
+            // updateAllOutdated \u5931\u8D25\u540E\u4F1A\u8FD4\u56DE\u5F88\u77ED\u7684\u91CD\u8BD5\u95F4\u9694 (\u542F\u52A8\u5934\u51E0\u79D2\u7F51\u7EDC\u8FD8\u6CA1\u5C31\u7EEA\u662F\u5E38\u6001), \u8FD9\u91CC\u53EA\u515C\u5E95\u9632\u6B62\u7A7A\u8F6C
             delay(nextDelay.coerceAtLeast(10.seconds))
         }
     }
@@ -613,7 +619,7 @@ fun KoinApplication.startCommonKoinModule(
     coroutineScope.launch {
         val currentSaves = context.dataStores.mediaSourceSaveStore.data.first()
         val defaultInstanceIds = MediaSourceSaves.Default.instances.map { it.instanceId }
-        // 如果当前的数据源列表的 instance ids 都在默认列表里, 说明用户没有自定义过数据源, 直接写入默认源
+        // \u5982\u679C\u5F53\u524D\u7684\u6570\u636E\u6E90\u5217\u8868\u7684 instance ids \u90FD\u5728\u9ED8\u8BA4\u5217\u8868\u91CC, \u8BF4\u660E\u7528\u6237\u6CA1\u6709\u81EA\u5B9A\u4E49\u8FC7\u6570\u636E\u6E90, \u76F4\u63A5\u5199\u5165\u9ED8\u8BA4\u6E90
         if (currentSaves.instances.all { it.instanceId in defaultInstanceIds }) {
             context.dataStores.mediaSourceSaveStore.updateData { MediaSourceSaves.Default }
         }
@@ -629,7 +635,7 @@ fun KoinApplication.startCommonKoinModule(
 }
 
 /**
- * 需要一直持有的 http client 实例列表
+ * \u9700\u8981\u4E00\u76F4\u6301\u6709\u7684 http client \u5B9E\u4F8B\u5217\u8868
  */
 private fun holdingInstanceMatrixSequence() = sequence {
     for (userAgent in ScopedHttpClientUserAgent.entries) {
