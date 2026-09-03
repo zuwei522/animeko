@@ -25,8 +25,22 @@ import org.jetbrains.compose.resources.DrawableResource
  * 随包的那 125 张 ([BangumiCommentSticker]) 保留着当离线快路径: 有本地图就不必等网络.
  */
 object BangumiStickers {
-    /** Bangumi 的图片站. */
-    private const val IMAGE_HOST = "https://lain.bgm.tv"
+    /** Bangumi 的图片站 (原站默认). */
+    private const val DEFAULT_IMAGE_HOST = "https://lain.bgm.tv"
+
+    /**
+     * 当前生效的图片站 host. 支持镜像地址.
+     * 应用启动时通过 [configureImageHost] 设置.
+     */
+    @Volatile
+    private var imageHost: String = DEFAULT_IMAGE_HOST
+
+    /**
+     * 配置图片站 host (支持镜像). 应用启动时调用.
+     */
+    fun configureImageHost(host: String) {
+        imageHost = host.trimEnd('/')
+    }
 
     private const val SMILES = "/img/smiles"
 
@@ -124,7 +138,7 @@ object BangumiStickers {
      * 表情代码 (完整形态, 如 `"(bgm38)"` / `"(musume_06)"` / `"(=A=)"`) 对应的图片地址.
      * 不认识的代码返回 `null` —— 调用方应当退化成显示原文本, 而不是显示一块空白.
      */
-    fun imageUrlOf(token: String): String? = PATH_BY_TOKEN[token]?.let { IMAGE_HOST + it }
+    fun imageUrlOf(token: String): String? = PATH_BY_TOKEN[token]?.let { imageHost + it }
 
     /** 这段代码是不是表情. */
     operator fun contains(token: String): Boolean = token in PATH_BY_TOKEN

@@ -19,6 +19,7 @@ import me.him188.ani.app.domain.session.SessionState
 import me.him188.ani.app.domain.session.SessionStateProvider
 import me.him188.ani.app.domain.session.auth.BangumiOAuthClient
 import me.him188.ani.app.domain.session.auth.OAuthConfigurator
+import me.him188.ani.app.domain.settings.BangumiMirrorProvider
 import me.him188.ani.app.domain.session.canAccessAniApiNow
 import me.him188.ani.app.ui.foundation.AbstractViewModel
 import me.him188.ani.utils.coroutines.SingleTaskExecutor
@@ -29,11 +30,12 @@ class BangumiAuthorizeViewModel : AbstractViewModel(), KoinComponent {
     private val aniApiProvider: AniApiProvider by inject()
     private val sessionManager: SessionManager by inject()
     private val sessionStateProvider: SessionStateProvider by inject()
+    private val bangumiMirrorProvider: BangumiMirrorProvider by inject()
 
     private val tasker = SingleTaskExecutor(backgroundScope.coroutineContext)
 
     private val configurator = OAuthConfigurator(
-        client = BangumiOAuthClient(aniApiProvider.bangumiApi, sessionStateProvider),
+        client = BangumiOAuthClient(aniApiProvider.bangumiApi, sessionStateProvider, bangumiMirrorProvider),
         sessionManager = sessionManager,
         sessionStateProvider = sessionStateProvider,
     )
