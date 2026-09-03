@@ -300,6 +300,11 @@ private fun KoinApplication.otherModules(getContext: () -> Context, coroutineSco
         SubjectCollectionRepositoryImpl(
             subjectService = get(),
             subjectCollectionDao = database.subjectCollection(),
+//            characterDao = database.character(),
+//            characterActorDao = database.characterActor(),
+//            personDao = database.person(),
+//            subjectCharacterRelationDao = database.subjectCharacterRelation(),
+//            subjectPersonRelationDao = database.subjectPersonRelation(),
             subjectRelationsDao = database.subjectRelations(),
             animeScheduleRepository = get(),
             episodeService = get(),
@@ -495,6 +500,19 @@ private fun KoinApplication.otherModules(getContext: () -> Context, coroutineSco
 
         MediaCacheManagerImpl(
             storagesIncludingDisabled = buildList(capacity = engines.size) {
+                /*if (currentAniBuildConfig.isDebug) {
+                    // 注意, 这个必须要在第一个, 见 [DefaultTorrentManager.engines] 注释
+                    add(
+                        @Suppress("DEPRECATION")
+                        TorrentMediaCacheStorage(
+                            mediaSourceId = "test-in-memory",
+                            store = metadataStore,
+                            engine = DummyMediaCacheEngine("test-in-memory"),
+                            "[debug]dummy",
+                            coroutineScope.childScopeContext(),
+                        ),
+                    )
+                }*/
                 for (engine in engines) {
                     add(
                         @Suppress("DEPRECATION")
