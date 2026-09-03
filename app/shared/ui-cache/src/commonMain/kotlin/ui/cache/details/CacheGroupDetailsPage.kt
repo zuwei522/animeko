@@ -140,6 +140,8 @@ fun MediaCacheDetailsScreen(
                 }
             }
         },
+        // 页面背景恒用跟随当前深浅主题的页面背景色, 与缓存管理/条目缓存页一致
+        containerColor = AniThemeDefaults.pageContentBackgroundColor,
         contentWindowInsets = windowInsets.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
     ) { paddingValues ->
         Column(
