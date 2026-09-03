@@ -11,9 +11,12 @@ package me.him188.ani.app.domain.session.auth
 
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.http.HttpStatusCode
+import kotlinx.coroutines.flow.first
 import me.him188.ani.app.data.repository.RepositoryException
 import me.him188.ani.app.domain.session.AccessTokenPair
 import me.him188.ani.app.domain.session.SessionStateProvider
+import me.him188.ani.app.domain.settings.BangumiMirrorProvider
+import me.him188.ani.app.domain.settings.NoBangumiMirrorProvider
 import me.him188.ani.client.apis.BangumiAniApi
 import me.him188.ani.client.models.AniUserAuthRoutingLoginResponse
 import me.him188.ani.utils.ktor.ApiInvoker
@@ -71,6 +74,7 @@ fun AniUserAuthRoutingLoginResponse.toOAuthResult(): OAuthResult {
 class BangumiOAuthClient(
     private val bangumiApi: ApiInvoker<BangumiAniApi>,
     private val sessionStateProvider: SessionStateProvider,
+    private val mirrorProvider: BangumiMirrorProvider = NoBangumiMirrorProvider,
     private val platform: Platform = currentPlatform(),
 ) : OAuthClient {
     override suspend fun getOAuthRegisterLink(requestId: String): String {
@@ -82,7 +86,7 @@ class BangumiOAuthClient(
         } catch (e: Throwable) {
             throw RepositoryException.wrapOrThrowCancellation(e)
         }
-        return resp.url
+        return rewriteToMirrorIfEnabled(resp.url)
     }
 
     override suspend fun getOAuthBindLink(requestId: String): String {
@@ -95,7 +99,25 @@ class BangumiOAuthClient(
         } catch (e: Throwable) {
             throw RepositoryException.wrapOrThrowCancellation(e)
         }
-        return resp.url
+        return rewriteToMirrorIfEnabled(resp.url)
+    }
+
+    /**
+     * Ani 服务器返回的 OAuth 授权链接指向 Bangumi 主站 (如 https://bgm.tv/oauth/authorize?...).
+     * 若用户启用了镜像且配置了主站根域名, 把链接的主站 origin 替换为镜像根域名,
+     * 使登录授权页也在镜像站点上打开; 未启用/未配置主站镜像时原样返回.
+     */
+    private suspend fun rewriteToMirrorIfEnabled(url: String): String {
+        val settings = mirrorProvider.settings.first()
+        if (!settings.enabled) return url
+        val mirrorRoot = settings.rootBaseUrl.trimEnd('/')
+        if (mirrorRoot.isBlank()) return url
+        val defaultOrigin = "https://bgm.tv"
+        return if (url.startsWith(defaultOrigin) && mirrorRoot != defaultOrigin) {
+            mirrorRoot + url.removePrefix(defaultOrigin)
+        } else {
+            url
+        }
     }
 
     override suspend fun getResult(requestId: String): OAuthResult? {
