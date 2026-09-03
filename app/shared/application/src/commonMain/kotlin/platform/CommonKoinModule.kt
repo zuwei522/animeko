@@ -43,6 +43,7 @@ import me.him188.ani.app.data.network.EpisodeService
 import me.him188.ani.app.data.network.EpisodeServiceImpl
 import me.him188.ani.app.data.network.RecommendationRepository
 import me.him188.ani.app.data.network.RemoteSubjectService
+import me.him188.ani.app.data.network.SettingsBangumiEndpointProvider
 import me.him188.ani.app.data.network.SubjectService
 import me.him188.ani.app.data.network.TrendsRepository
 import me.him188.ani.app.data.network.WatchTogetherApiService
@@ -139,6 +140,8 @@ import me.him188.ani.app.domain.session.AniSessionRefresher
 import me.him188.ani.app.domain.session.SessionManager
 import me.him188.ani.app.domain.session.SessionStateProvider
 import me.him188.ani.app.domain.settings.ProxyProvider
+import me.him188.ani.app.domain.settings.BangumiMirrorProvider
+import me.him188.ani.app.domain.settings.SettingsBasedBangumiMirrorProvider
 import me.him188.ani.app.domain.settings.SettingsBasedProxyProvider
 import me.him188.ani.app.domain.torrent.TorrentManager
 import me.him188.ani.app.domain.update.UpdateManager
@@ -147,9 +150,11 @@ import me.him188.ani.app.domain.watchtogether.PlaybackAutomationGate
 import me.him188.ani.app.domain.watchtogether.WatchTogetherManager
 import me.him188.ani.app.domain.usecase.useCaseModules
 import me.him188.ani.app.ui.subject.details.state.DefaultSubjectDetailsStateFactory
+import me.him188.ani.app.ui.comment.BangumiStickers
 import me.him188.ani.app.ui.subject.details.state.SubjectDetailsStateFactory
 import me.him188.ani.datasources.bangumi.BangumiClient
 import me.him188.ani.datasources.bangumi.BangumiClientImpl
+import me.him188.ani.datasources.bangumi.BangumiEndpointProvider
 import me.him188.ani.utils.coroutines.IO_
 import me.him188.ani.utils.coroutines.childScope
 import me.him188.ani.utils.coroutines.childScopeContext
@@ -173,6 +178,8 @@ fun KoinApplication.getCommonKoinModule(getContext: () -> Context, coroutineScop
 private fun KoinApplication.otherModules(getContext: () -> Context, coroutineScope: CoroutineScope) = module {
     // Repositories
     single<ProxyProvider> { SettingsBasedProxyProvider(get(), coroutineScope) }
+    single<BangumiMirrorProvider> { SettingsBasedBangumiMirrorProvider(get(), coroutineScope) }
+    single<BangumiEndpointProvider> { SettingsBangumiEndpointProvider(get(), coroutineScope) }
     single<SessionManager> {
         SessionManager(
             tokenRepository = get(),
@@ -285,6 +292,7 @@ private fun KoinApplication.otherModules(getContext: () -> Context, coroutineSco
             get<HttpClientProvider>().get(
                 userAgent = ScopedHttpClientUserAgent.ANI,
             ),
+            endpointProvider = get(),
         )
     }
 
@@ -292,11 +300,6 @@ private fun KoinApplication.otherModules(getContext: () -> Context, coroutineSco
         SubjectCollectionRepositoryImpl(
             subjectService = get(),
             subjectCollectionDao = database.subjectCollection(),
-//            characterDao = database.character(),
-//            characterActorDao = database.characterActor(),
-//            personDao = database.person(),
-//            subjectCharacterRelationDao = database.subjectCharacterRelation(),
-//            subjectPersonRelationDao = database.subjectPersonRelation(),
             subjectRelationsDao = database.subjectRelations(),
             animeScheduleRepository = get(),
             episodeService = get(),
@@ -390,7 +393,7 @@ private fun KoinApplication.otherModules(getContext: () -> Context, coroutineSco
     single<AniCommentReportService> { AniCommentReportService(get<AniApiProvider>().commentsApi) }
     // 匿名客户端 (与 BangumiClient 同一个): 只读公开的评论关系, 不带任何 token
     single<BangumiReplyRelationService> {
-        BangumiReplyRelationService(get<HttpClientProvider>().get(userAgent = ScopedHttpClientUserAgent.ANI))
+        BangumiReplyRelationService(get<HttpClientProvider>().get(userAgent = ScopedHttpClientUserAgent.ANI), mirrorProvider = get())
     }
     single<EpisodeCommentRepository> {
         EpisodeCommentRepository(aniCommentService = get(), replyRelationService = get())
@@ -431,7 +434,7 @@ private fun KoinApplication.otherModules(getContext: () -> Context, coroutineSco
     }
     single<AnimeScheduleService> { AnimeScheduleService(get<AniApiProvider>().scheduleApi) }
     single<TmdbImageService> { TmdbImageService(get(), getContext().dataStores.tmdbImageCacheStore) }
-    single<BangumiSummaryService> { BangumiSummaryService(get()) }
+    single<BangumiSummaryService> { BangumiSummaryService(get(), mirrorProvider = get()) }
     single<TrendsRepository> { TrendsRepository(get<AniApiProvider>().trendsApi) }
     single<RecommendationRepository> { RecommendationRepository(get<AniApiProvider>().homeApi) }
     single<AutoSkipRepository> { AutoSkipRepository(get<AniApiProvider>().episodesApi) }
@@ -492,19 +495,6 @@ private fun KoinApplication.otherModules(getContext: () -> Context, coroutineSco
 
         MediaCacheManagerImpl(
             storagesIncludingDisabled = buildList(capacity = engines.size) {
-                /*if (currentAniBuildConfig.isDebug) {
-                    // 注意, 这个必须要在第一个, 见 [DefaultTorrentManager.engines] 注释
-                    add(
-                        @Suppress("DEPRECATION")
-                        TorrentMediaCacheStorage(
-                            mediaSourceId = "test-in-memory",
-                            store = metadataStore,
-                            engine = DummyMediaCacheEngine("test-in-memory"),
-                            "[debug]dummy",
-                            coroutineScope.childScopeContext(),
-                        ),
-                    )
-                }*/
                 for (engine in engines) {
                     add(
                         @Suppress("DEPRECATION")
@@ -592,6 +582,17 @@ fun KoinApplication.startCommonKoinModule(
         }
     }
     // Now, the proxy settings is ready. Other components can use http clients.
+
+    // 配置 Bangumi 表情图片站的镜像地址, 并监听设置变化动态更新
+    runBlocking {
+        val mirrorSettings = koin.get<BangumiMirrorProvider>().settings.first()
+        BangumiStickers.configureImageHost(mirrorSettings.lainBaseUrl)
+    }
+    coroutineScope.launch {
+        koin.get<BangumiMirrorProvider>().settings.collect { settings ->
+            BangumiStickers.configureImageHost(settings.lainBaseUrl)
+        }
+    }
 
     coroutineScope.launch {
         koin.get<HttpDownloader>().init() // restore http download states first

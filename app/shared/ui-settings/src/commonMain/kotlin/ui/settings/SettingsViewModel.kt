@@ -26,6 +26,7 @@ import me.him188.ani.app.data.models.danmaku.DanmakuFilterConfig
 import me.him188.ani.app.data.models.danmaku.DanmakuRegexFilter
 import me.him188.ani.app.data.models.preference.AnalyticsSettings
 import me.him188.ani.app.data.models.preference.AnitorrentConfig
+import me.him188.ani.app.data.models.preference.BangumiMirrorSettings
 import me.him188.ani.app.data.models.preference.PikPakConfig
 import me.him188.ani.app.data.models.preference.DanmakuSettings
 import me.him188.ani.app.data.models.preference.DebugSettings
@@ -52,6 +53,7 @@ import me.him188.ani.app.data.repository.player.DanmakuRegexFilterRepository
 import me.him188.ani.app.data.repository.user.SettingsRepository
 import me.him188.ani.app.data.repository.user.TokenRepository
 import me.him188.ani.app.data.repository.user.TokenSave
+import me.him188.ani.app.data.repository.user.Settings
 import me.him188.ani.app.domain.foundation.HttpClientProvider
 import me.him188.ani.app.domain.foundation.get
 import me.him188.ani.app.domain.media.fetch.MediaSourceManager
@@ -62,6 +64,7 @@ import me.him188.ani.app.domain.settings.ProxySettingsFlowProxyProvider
 import me.him188.ani.app.domain.settings.ProxyTester
 import me.him188.ani.app.domain.settings.ServiceConnectionTester
 import me.him188.ani.app.domain.settings.ServiceConnectionTesters
+import me.him188.ani.datasources.bangumi.BangumiEndpointProvider
 import me.him188.ani.app.platform.PermissionManager
 import me.him188.ani.app.platform.currentAniBuildConfig
 import me.him188.ani.app.ui.foundation.launchInBackground
@@ -110,6 +113,7 @@ class SettingsViewModel : AbstractSettingsViewModel(), KoinComponent {
     private val mediaSourceCodecManager: MediaSourceCodecManager by inject()
     private val clientProvider: HttpClientProvider by inject()
     private val tmdbImageService: TmdbImageService by inject()
+    private val bangumiEndpointProvider: BangumiEndpointProvider by inject()
     private val tokenRepository: TokenRepository by inject()
 
     private val proxyProvider = ProxySettingsFlowProxyProvider(settingsRepository.proxySettings.flow, backgroundScope)
@@ -214,6 +218,7 @@ class SettingsViewModel : AbstractSettingsViewModel(), KoinComponent {
         clientProvider = clientProvider,
         flowScope = backgroundScope,
         tmdbImageService = tmdbImageService,
+        bangumiEndpointProvider = bangumiEndpointProvider,
     )
 
     private val configureProxyUiState = combine(
@@ -249,6 +254,11 @@ class SettingsViewModel : AbstractSettingsViewModel(), KoinComponent {
         },
         onRequestReTest = { proxyTester.restartTest() },
     )
+    // endregion
+
+    // region Bangumi Mirror
+    val bangumiMirrorSettings: Settings<BangumiMirrorSettings>
+        get() = settingsRepository.bangumiMirrorSettings
     // endregion
 
     val danmakuSettingsState =

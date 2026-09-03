@@ -176,6 +176,7 @@ import me.him188.ani.app.ui.settings.tabs.media.source.MediaSourceGroup
 import me.him188.ani.app.ui.settings.tabs.media.source.MediaSourceSelectionActions
 import me.him188.ani.app.ui.settings.tabs.media.source.MediaSourceSubscriptionGroup
 import me.him188.ani.app.ui.settings.tabs.media.source.rememberMediaSourceSelectionState
+import me.him188.ani.app.ui.settings.tabs.network.BangumiMirrorSettingsGroup
 import me.him188.ani.app.ui.settings.tabs.network.ConfigureProxyGroup
 import me.him188.ani.app.ui.settings.tabs.network.ServerSelectionGroup
 import me.him188.ani.app.ui.settings.tabs.theme.ThemeGroup
@@ -382,10 +383,17 @@ fun SettingsScreen(
 
                             SettingsTab.MEDIA_SELECTOR -> MediaSelectionGroup(vm.mediaSelectionGroupState)
                             SettingsTab.SERVER -> ServerSelectionGroup(vm.danmakuSettingsState, vm.danmakuServerTesters)
-                            SettingsTab.PROXY -> ConfigureProxyGroup(
-                                state = vm.configureProxyState,
-                                onStartProxyTestLoop = { vm.startProxyTesterLoop() },
-                            )
+                            SettingsTab.PROXY -> {
+                                ConfigureProxyGroup(
+                                    state = vm.configureProxyState,
+                                    onStartProxyTestLoop = { vm.startProxyTesterLoop() },
+                                )
+                                HorizontalDividerItem()
+                                BangumiMirrorSettingsGroup(
+                                    settings = vm.bangumiMirrorSettings,
+                                    backgroundScope = vm.backgroundScope,
+                                )
+                            }
 
                             SettingsTab.BT -> {
                                 TorrentEngineGroup(vm.torrentSettingsState)

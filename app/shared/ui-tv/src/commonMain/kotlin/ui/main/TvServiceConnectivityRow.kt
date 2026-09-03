@@ -62,6 +62,7 @@ import me.him188.ani.app.ui.lang.tv_service_probe_bangumi
 import me.him188.ani.app.ui.lang.tv_service_probe_bangumi_next
 import me.him188.ani.app.ui.lang.tv_service_probe_tmdb
 import me.him188.ani.app.ui.lang.tv_service_probe_tmdb_image
+import me.him188.ani.datasources.bangumi.BangumiEndpointProvider
 import me.him188.ani.utils.platform.currentTimeMillis
 import org.jetbrains.compose.resources.stringResource
 import org.koin.core.component.KoinComponent
@@ -182,11 +183,13 @@ private val TV_SERVICE_TROUBLE_RERUN_MIN_INTERVAL: Duration = 5.minutes
 class TvServiceConnectivityState : AbstractViewModel(), KoinComponent {
     private val clientProvider: HttpClientProvider by inject()
     private val tmdbImageService: TmdbImageService by inject()
+    private val bangumiEndpointProvider: BangumiEndpointProvider by inject()
 
     private val tester = ProxyTester(
         clientProvider = clientProvider,
         flowScope = backgroundScope,
         tmdbImageService = tmdbImageService,
+        bangumiEndpointProvider = bangumiEndpointProvider,
         serviceIds = TV_SERVICE_PROBES.map { it.id }.toSet(),
     )
 
