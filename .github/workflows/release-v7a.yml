@@ -80,7 +80,17 @@ jobs:
 
       - name: 'Generate Mock google-services.json'
         run: |
-          echo '{"project_info":{"project_number":"0","project_id":"mock-project","storage_bucket":"mock-bucket"},"client":[{"client_info":{"mobilesdk_app_id":"1:123456789012:android:0000000000000000","android_client_info":{"package_name":"me.him188.ani"}},"api_key":[{"current_key":"mock_key"}]},{"client_info":{"mobilesdk_app_id":"1:123456789012:android:0000000000000001","android_client_info":{"package_name":"me.him188.ani.tv"}},"api_key":[{"current_key":"mock_key"}]}]}' > ./app/android/google-services.json
+          # 必须覆盖所有 applicationId 变体:
+          #   phone release = me.him188.ani
+          #   tv release    = me.him188.ani.tv
+          #   phone debug   = me.him188.ani.debug2  (buildType applicationIdSuffix=.debug2)
+          #   tv debug      = me.him188.ani.tv.debug2
+          # 缺任何一个都会导致 process*GoogleServices 任务报 "No matching client found for package name".
+          cat > ./app/android/google-services.json <<'JSON'
+          {"project_info":{"project_number":"0","project_id":"mock-project","storage_bucket":"mock-bucket"},"client":[{"client_info":{"mobilesdk_app_id":"1:123456789012:android:0000000000000000","android_client_info":{"package_name":"me.him188.ani"}},"api_key":[{"current_key":"mock_key"}]},{"client_info":{"mobilesdk_app_id":"1:123456789012:android:0000000000000001","android_client_info":{"package_name":"me.him188.ani.tv"}},"api_key":[{"current_key":"mock_key"}]},{"client_info":{"mobilesdk_app_id":"1:123456789012:android:0000000000000002","android_client_info":{"package_name":"me.him188.ani.debug2"}},"api_key":[{"current_key":"mock_key"}]},{"client_info":{"mobilesdk_app_id":"1:123456789012:android:0000000000000003","android_client_info":{"package_name":"me.him188.ani.tv.debug2"}},"api_key":[{"current_key":"mock_key"}]}]}
+          JSON
+          echo "---- google-services.json ----"
+          cat ./app/android/google-services.json
 
       - name: 'Fix permissions'
         run: 'chmod -R 777 .'
