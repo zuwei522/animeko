@@ -23,6 +23,8 @@ import me.him188.ani.app.domain.foundation.ServerListFeatureConfig
 import me.him188.ani.app.domain.foundation.withValue
 import me.him188.ani.app.trace.ErrorReport
 import me.him188.ani.datasources.bangumi.BangumiClientImpl
+import me.him188.ani.datasources.bangumi.BangumiEndpointProvider
+import me.him188.ani.datasources.bangumi.DefaultBangumiEndpointProvider
 import me.him188.ani.utils.analytics.Analytics
 import me.him188.ani.utils.analytics.AnalyticsEvent
 import me.him188.ani.utils.coroutines.flows.FlowRestarter
@@ -41,6 +43,11 @@ class ProxyTester(
     clientProvider: HttpClientProvider,
     flowScope: CoroutineScope,
     tmdbImageService: TmdbImageService,
+    /**
+     * Bangumi 端点提供者. 传入基于设置的实现 (如 [me.him188.ani.app.data.network.SettingsBangumiEndpointProvider]),
+     * 连通性测试就会按当前镜像设置走镜像域名; 默认原站.
+     */
+    bangumiEndpointProvider: BangumiEndpointProvider = DefaultBangumiEndpointProvider,
     serviceIds: Set<String> = ServiceConnectionTesters.DefaultServiceIds,
 ) {
     private val proxyTestRunning = FlowRunning()
@@ -52,7 +59,7 @@ class ProxyTester(
         )
 
         ServiceConnectionTesters.createDefault(
-            bangumiClient = BangumiClientImpl(client),
+            bangumiClient = BangumiClientImpl(client, bangumiEndpointProvider),
             aniClient = client,
             // 与上面两个不同, 这里复用单例而不是新建客户端: 它自己那份 ScopedHttpClient
             // 就是从同一个池子借的, 代理变了池子会重建, 不需要在这里再包一层
