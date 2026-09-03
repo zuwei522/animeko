@@ -14,13 +14,16 @@ import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import me.him188.ani.app.data.models.preference.BangumiMirrorSettings
 import me.him188.ani.app.domain.foundation.HttpClientProvider
 import me.him188.ani.app.domain.foundation.get
+import me.him188.ani.app.domain.settings.BangumiMirrorProvider
 import me.him188.ani.utils.coroutines.IO_
 import me.him188.ani.utils.logging.info
 import me.him188.ani.utils.logging.logger
@@ -34,9 +37,12 @@ import kotlin.coroutines.CoroutineContext
  *
  * bgm.tv v0 公开读接口无需鉴权 (仅 NSFW 条目要求 token, 拿不到时同"无简介"处理).
  * 结果按 subjectId 进程内缓存 (含"确认没有"的负缓存, 存空串); 网络错误不缓存, 下次重试.
+ *
+ * 支持 Bangumi 镜像地址: 从 [mirrorProvider] 获取当前生效的 API 域名.
  */
 class BangumiSummaryService(
     httpClientProvider: HttpClientProvider,
+    private val mirrorProvider: BangumiMirrorProvider? = null,
     private val ioDispatcher: CoroutineContext = Dispatchers.IO_,
 ) {
     private val client = httpClientProvider.get()
@@ -44,6 +50,9 @@ class BangumiSummaryService(
 
     private val cacheLock = Mutex()
     private val cache = mutableMapOf<Int, String>() // "" = 已确认 bgm.tv 也没有
+
+    private suspend fun currentSettings(): BangumiMirrorSettings =
+        mirrorProvider?.settings?.first() ?: BangumiMirrorSettings.Default
 
     /**
      * 获取 bgm.tv 上该条目的简介 (trim 后); 确认没有时返回 null (含 NSFW 条目匿名 404).
@@ -53,8 +62,9 @@ class BangumiSummaryService(
     suspend fun getSummary(subjectId: Int): String? = withContext(ioDispatcher) {
         cacheLock.withLock { cache[subjectId] }?.let { return@withContext it.ifEmpty { null } }
 
+        val apiBaseUrl = currentSettings().apiBaseUrl
         val summary = try {
-            val body = client.use { get("$BGM_API_BASE_URL/v0/subjects/$subjectId").bodyAsText() }
+            val body = client.use { get("$apiBaseUrl/v0/subjects/$subjectId").bodyAsText() }
             json.decodeFromString(BangumiSubjectSummary.serializer(), body).summary.trim()
         } catch (e: CancellationException) {
             throw e
@@ -78,7 +88,6 @@ class BangumiSummaryService(
     )
 
     private companion object {
-        private const val BGM_API_BASE_URL = "https://api.bgm.tv"
         private val logger = logger<BangumiSummaryService>()
     }
 }

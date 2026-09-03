@@ -24,6 +24,7 @@ import me.him188.ani.app.data.models.danmaku.DanmakuConfigSerializer
 import me.him188.ani.app.data.models.danmaku.DanmakuFilterConfig
 import me.him188.ani.app.data.models.preference.AnalyticsSettings
 import me.him188.ani.app.data.models.preference.AnitorrentConfig
+import me.him188.ani.app.data.models.preference.BangumiMirrorSettings
 import me.him188.ani.app.data.models.preference.DanmakuSettings
 import me.him188.ani.app.data.models.preference.DebugSettings
 import me.him188.ani.app.data.models.preference.MediaCacheSettings
@@ -93,6 +94,13 @@ interface SettingsRepository {
     val analyticsSettings: Settings<AnalyticsSettings>
     val debugSettings: Settings<DebugSettings>
     val watchTogetherSettings: Settings<WatchTogetherSettings>
+
+    /**
+     * Bangumi 镜像地址设置.
+     *
+     * @since 6.2.0
+     */
+    val bangumiMirrorSettings: Settings<BangumiMirrorSettings>
 }
 
 @Stable
@@ -275,6 +283,11 @@ class PreferencesRepositoryImpl(
         "watchTogetherSettings",
         WatchTogetherSettings.serializer(),
         default = { WatchTogetherSettings.Default },
+    )
+    override val bangumiMirrorSettings: Settings<BangumiMirrorSettings> = SerializablePreference(
+        "bangumiMirrorSettings",
+        BangumiMirrorSettings.serializer(),
+        default = { BangumiMirrorSettings.Default },
     )
 
     private companion object {
