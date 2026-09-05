@@ -6,7 +6,9 @@
  *
  * https://github.com/open-ani/ani/blob/main/LICENSE
  */
+
 package me.him188.ani.app.ui.mediafetch
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -99,7 +101,10 @@ import me.him188.ani.datasources.api.topic.ResourceLocation
 import me.him188.ani.utils.platform.annotations.TestOnly
 import me.him188.ani.utils.platform.isMobile
 import org.jetbrains.compose.resources.stringResource
+
+
 private inline val WINDOW_VERTICAL_PADDING get() = 8.dp
+
 // For search: "数据源"
 /**
  * 通用的数据源选择器. See preview
@@ -123,12 +128,14 @@ fun MediaSelectorView(
     val bringIntoViewRequesters = remember { mutableStateMapOf<Media, BringIntoViewRequester>() }
     val presentation by state.presentationFlow.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
+
     // TV: 聚焦滚动统一为"吸顶" (焦点元素吸附容器顶/行左缘), 见 SnapToStartScrollProvider;
     // 非 TV 原样组合
     SnapToStartScrollProvider {
     Column(modifier) {
         val lazyListState = rememberLazyListState()
         var showExcluded by rememberSaveable { mutableStateOf(false) }
+
         // 编辑查询请求的对话框
         var showEditRequest by rememberSaveable { mutableStateOf(false) }
         if (showEditRequest && fetchRequest != null) {
@@ -141,6 +148,7 @@ fun MediaSelectorView(
                 },
             )
         }
+
         // 切换数据源类型的按钮
         ViewKindAndMoreRow(
             viewKind,
@@ -148,6 +156,7 @@ fun MediaSelectorView(
             onRequestFetchRequestEdit = { showEditRequest = true },
             Modifier.fillMaxWidth().padding(bottom = 16.dp),
         )
+
         AnimatedContent(
             viewKind,
             transitionSpec = LocalAniMotionScheme.current.animatedContent.topLevel,
@@ -178,6 +187,7 @@ fun MediaSelectorView(
                             .ifThen(scrollable) { verticalScroll(rememberScrollState()) },
                     )
                 }
+
                 ViewKind.BT -> {
                     Column {
                         LegacyBTSourceColumn(
@@ -208,8 +218,9 @@ fun MediaSelectorView(
         }
     }
     }
+
     LaunchedEffect(Unit) {
-        // 当选择一个资源时 (例如自动选择), 自动滚动到该资源 #667
+        // 当选择一个资源时 (例如自动选择)，自动滚动到该资源 #667
         snapshotFlow { presentation.selected }
             .filterNotNull()
             .collectLatest {
@@ -217,6 +228,7 @@ fun MediaSelectorView(
             }
     }
 }
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ViewKindAndMoreRow(
@@ -228,7 +240,9 @@ private fun ViewKindAndMoreRow(
     val simpleModeText = stringResource(Lang.media_selector_view_simple_mode)
     val detailedModeText = stringResource(Lang.media_selector_view_detailed_mode)
     val firstButtonFocusRequester = remember { FocusRequester() }
+
     val focusDriven = LocalAniUiBehavior.current.focusDrivenNavigation
+
     // Auto-request focus on the first button when the row appears (TV only)
     if (focusDriven) {
         LaunchedEffect(Unit) {
@@ -236,6 +250,7 @@ private fun ViewKindAndMoreRow(
             firstButtonFocusRequester.requestFocus()
         }
     }
+
     Row(
         modifier,
         verticalAlignment = Alignment.CenterVertically,
@@ -260,6 +275,7 @@ private fun ViewKindAndMoreRow(
                 Text(detailedModeText, softWrap = false)
             }
         }
+
         IconButton(
             onRequestFetchRequestEdit,
             modifier = Modifier,
@@ -275,9 +291,12 @@ private fun ViewKindAndMoreRow(
 //                    },
 //                )
 //            }
+
             // 编辑请求
     }
 }
+
+
 @Composable
 private fun LegacyBTSourceColumn(
     lazyListState: LazyListState,
@@ -308,6 +327,7 @@ private fun LegacyBTSourceColumn(
                 filteredCountText,
                 style = MaterialTheme.typography.titleMedium,
             )
+
             MediaSelectorFilters(
                 resolution = state.resolution,
                 subtitleLanguageId = state.subtitleLanguageId,
@@ -336,6 +356,7 @@ private fun LegacyBTSourceColumn(
                 sourceResults()
             }
         }
+
         if (focusDriven) {
             // TV: 筛选行作普通条目随页滚动, 不做 stickyHeader —— 悬浮层会盖住
             // 吸顶到容器顶部的焦点卡片 (TV 聚焦滚动为吸顶, 见 SnapToStartScrollProvider)
@@ -353,9 +374,11 @@ private fun LegacyBTSourceColumn(
                 HorizontalDivider(Modifier.fillMaxWidth(), thickness = 2.dp)
             }
         }
+
         items(presentation.groupedMediaListIncluded, key = { it.groupId }) { group ->
             MediaItemGroup(group, bringIntoViewRequesters, state, presentation, onClickItem)
         }
+
         // TV 的开关胶囊在筛选行尾部 (见上), 不再放列表底部的 Switch 行
         if (!focusDriven && presentation.groupedMediaListExcluded.isNotEmpty()) {
             item {
@@ -382,14 +405,17 @@ private fun LegacyBTSourceColumn(
                 MediaItemGroup(group, bringIntoViewRequesters, state, presentation, onClickItem)
             }
         }
+
         item { } // dummy spacer
     }
 }
+
 @Serializable
 enum class ViewKind {
     WEB,
     BT,
 }
+
 @OptIn(UnsafeOriginalMediaAccess::class)
 @Composable
 private fun LazyItemScope.MediaItemGroup(
@@ -447,9 +473,13 @@ private fun LazyItemScope.MediaItemGroup(
         Spacer(Modifier.height(8.dp))
     }
 }
+
+
 ///////////////////////////////////////////////////////////////////////////
 // Previews
 ///////////////////////////////////////////////////////////////////////////
+
+
 @TestOnly
 internal val previewMediaList = TestMediaList.run {
     listOf(
@@ -460,6 +490,7 @@ internal val previewMediaList = TestMediaList.run {
         ),
     ) + this
 }
+
 @OptIn(TestOnly::class)
 @PreviewLightDark
 @Composable
@@ -483,6 +514,7 @@ private fun PreviewMediaSelector() {
         }
     }
 }
+
 @Composable
 @OptIn(TestOnly::class)
 private fun rememberTestMediaSelectorPresentation(previewMediaList: List<Media>, scope: CoroutineScope) =
@@ -510,6 +542,7 @@ private fun rememberTestMediaSelectorPresentation(previewMediaList: List<Media>,
             mediaSelectorSettings = flowOf(MediaSelectorSettings.AllVisible),
         )
     }
+
 @OptIn(TestOnly::class)
 @PreviewLightDark
 @Composable
@@ -531,6 +564,7 @@ private fun PreviewMediaItemIncluded(modifier: Modifier = Modifier) = ProvideCom
         modifier = modifier,
     )
 }
+
 @OptIn(TestOnly::class)
 @PreviewLightDark
 @Composable
