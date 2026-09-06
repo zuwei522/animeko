@@ -2,7 +2,7 @@
  * Copyright (C) 2024-2026 OpenAni and contributors.
  *
  * 此源代码的使用受 GNU AFFERO GENERAL PUBLIC LICENSE version 3 许可证的约束, 可以在以下链接找到该许可证.
- * Use of this source code is governed by the GNU AGPLv3 license, which can be found at the following link.
+ * Use of this source code is governed by the GNU AGPLv3 license, which can be found at the following link:
  *
  * https://github.com/open-ani/ani/blob/main/LICENSE
  */
@@ -30,7 +30,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -79,7 +78,6 @@ import me.him188.ani.app.domain.media.selector.MediaExclusionReason
 import me.him188.ani.app.domain.media.selector.MediaSelectorContext
 import me.him188.ani.app.domain.media.selector.TestMatchMetadata
 import me.him188.ani.app.domain.media.selector.UnsafeOriginalMediaAccess
-import me.him188.ani.app.platform.currentAniBuildConfig
 import me.him188.ani.app.ui.foundation.LocalAniUiBehavior
 import me.him188.ani.app.ui.foundation.LocalPlatform
 import me.him188.ani.app.ui.foundation.ProvideCompositionLocalsForPreview
@@ -353,21 +351,6 @@ private fun LegacyBTSourceColumn(
         modifier,
         lazyListState,
     ) {
-        if (currentAniBuildConfig.isDebug) {
-            item {
-                Surface {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Debug tools: ")
-                        FilledTonalButton(onClick = { MediaSelectorDebugTools.dumpSubjectNames(presentation.filteredCandidates) }) {
-                            Text("Dump unique media lists")
-                        }
-                        FilledTonalButton(onClick = { MediaSelectorDebugTools.dumpEpisodeRanges(presentation.filteredCandidates) }) {
-                            Text("Dump EpisodeRanges")
-                        }
-                    }
-                }
-            }
-        }
         item {
             Row(Modifier.padding(bottom = 12.dp)) {
                 sourceResults()
