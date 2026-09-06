@@ -2,7 +2,7 @@
  * Copyright (C) 2024-2026 OpenAni and contributors.
  *
  * 此源代码的使用受 GNU AFFERO GENERAL PUBLIC LICENSE version 3 许可证的约束, 可以在以下链接找到该许可证.
- * Use of this source code is governed by the GNU AGPLv3 license, which can be found at the following link.
+ * Use of this source code is governed by the GNU AGPLv3 license, which can be found at the following link:
  *
  * https://github.com/open-ani/ani/blob/main/LICENSE
  */
@@ -14,12 +14,15 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import me.him188.ani.app.data.models.episode.EpisodeComment
 import me.him188.ani.app.data.models.episode.EpisodeCommentSource
+import me.him188.ani.app.data.models.preference.BangumiMirrorSettings
+import me.him188.ani.app.domain.settings.BangumiMirrorProvider
 import me.him188.ani.datasources.bangumi.next.apis.EpisodeBangumiNextApi
 import me.him188.ani.utils.coroutines.IO_
 import me.him188.ani.utils.ktor.ApiInvoker
@@ -63,11 +66,12 @@ class BangumiReplyRelationService internal constructor(
 ) {
     constructor(
         client: ScopedHttpClient,
+        mirrorProvider: BangumiMirrorProvider? = null,
         ioDispatcher: CoroutineContext = Dispatchers.IO_,
     ) : this(
         nowMillis = { currentTimeMillis() },
         scope = CoroutineScope(SupervisorJob() + ioDispatcher),
-        fetchRelations = bangumiFetcher(client, ioDispatcher),
+        fetchRelations = bangumiFetcher(client, mirrorProvider, ioDispatcher),
     )
 
     private val mutex = Mutex()
@@ -179,11 +183,15 @@ class BangumiReplyRelationService internal constructor(
  */
 private fun bangumiFetcher(
     client: ScopedHttpClient,
+    mirrorProvider: BangumiMirrorProvider?,
     ioDispatcher: CoroutineContext,
 ): suspend (Long) -> Map<String, String>? {
-    val api = ApiInvoker(client) { EpisodeBangumiNextApi(BANGUMI_NEXT_API_HOST, it) }
     return { episodeId ->
         withContext(ioDispatcher) {
+            val nextBaseUrl = mirrorProvider?.settings?.let {
+                runCatching { it.first().nextBaseUrl }.getOrDefault(BANGUMI_NEXT_API_HOST)
+            } ?: BANGUMI_NEXT_API_HOST
+            val api = ApiInvoker(client) { EpisodeBangumiNextApi(nextBaseUrl, it) }
             runCatching {
                 withTimeoutOrNull(FETCH_TIMEOUT) {
                     api {
