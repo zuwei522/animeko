@@ -2,7 +2,7 @@
  * Copyright (C) 2024-2026 OpenAni and contributors.
  *
  * 此源代码的使用受 GNU AFFERO GENERAL PUBLIC LICENSE version 3 许可证的约束, 可以在以下链接找到该许可证.
- * Use of this source code is governed by the GNU AGPLv3 license, which can be found at the following link.
+ * Use of this source code is governed by the GNU AGPLv3 license, which can be found at the following link:
  *
  * https://github.com/open-ani/ani/blob/main/LICENSE
  */
@@ -56,6 +56,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -95,6 +96,7 @@ import me.him188.ani.app.ui.danmaku.DanmakuEditorState
 import me.him188.ani.app.ui.episode.share.MediaShareData
 import me.him188.ani.app.ui.external.placeholder.placeholder
 import me.him188.ani.app.ui.foundation.animation.AniAnimatedVisibility
+import me.him188.ani.app.ui.foundation.animation.LocalAniMotionScheme
 import me.him188.ani.app.ui.foundation.animation.StandardAccelerateEasing
 import me.him188.ani.app.ui.foundation.animation.StandardDecelerateEasing
 import me.him188.ani.app.ui.foundation.theme.EasingDurations
@@ -253,16 +255,21 @@ internal fun TvPlayerControlsOverlay(
     //
     // **不能用 `by` 解构**: 那是在组合里读, 淡入淡出的每一帧都会重组整个控制层.
     // 留着 State 本体, 在 graphicsLayer 的 lambda 里读 —— 每帧只失效图层 (见本文件的重组纪律)
+    val disableAnimations = LocalAniMotionScheme.current.disableAnimations
     val chromeAlpha = animateFloatAsState(
         targetValue = if (chromeVisible) 1f else 0f,
-        animationSpec = tween(
-            durationMillis = if (chromeVisible) {
-                EasingDurations.standardDecelerate
-            } else {
-                EasingDurations.standardAccelerate
-            },
-            easing = if (chromeVisible) StandardDecelerateEasing else StandardAccelerateEasing,
-        ),
+        animationSpec = if (disableAnimations) {
+            snap()
+        } else {
+            tween(
+                durationMillis = if (chromeVisible) {
+                    EasingDurations.standardDecelerate
+                } else {
+                    EasingDurations.standardAccelerate
+                },
+                easing = if (chromeVisible) StandardDecelerateEasing else StandardAccelerateEasing,
+            )
+        },
         label = "TvPlayerControlsChrome",
     )
     // 淡入淡出期间的合成策略. 默认的 `CompositingStrategy.Auto` 在 alpha ∈ (0,1) 时会给**每个**
