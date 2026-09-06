@@ -142,7 +142,7 @@ import kotlin.time.Duration.Companion.seconds
  * UI 入口点. 包含所有子页面, 以及组合这些子页面的方式 (navigation).
  */
 @Composable
-fun AniAppContent(aniNavigator: AniNavigator) {
+fun AniAppContent(aniNavigator: AniNavigator, disableAnimations: Boolean = false) {
     val aniAppViewModel = viewModel<AniAppViewModel>()
     val appState = aniAppViewModel.appState.collectAsStateWithLifecycle(null).value ?: return
     val watchTogetherViewModel = viewModel { WatchTogetherViewModel() }
@@ -230,7 +230,7 @@ fun AniAppContent(aniNavigator: AniNavigator) {
             LocalWatchTogetherEntry provides watchTogetherEntry,
             LocalPlaybackSessionEntry provides (playbackSessionHolder ?: PlaybackSessionEntry.None),
         ) {
-            ProvideAniMotionCompositionLocals {
+            ProvideAniMotionCompositionLocals(disableAnimations = disableAnimations) {
                 AniAppContentImpl(
                     aniNavigator,
                     backStack,
