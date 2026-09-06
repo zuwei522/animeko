@@ -9,8 +9,10 @@
 
 package me.him188.ani.android.activity
 
+import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.SystemBarStyle
@@ -19,6 +21,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -59,17 +62,7 @@ class MainActivity : AniComponentActivity() {
     private val externalContentProviderFactory: ExternalContentProviderFactory by inject()
     private val settingsRepository: SettingsRepository by inject()
 
-    /**
-     * 本次 Activity 创建时落到窗口层的界面缩放, 由 [attachBaseContext] 定下, 之后不再变 ——
-     * 主窗口与所有弹窗都按它渲染. 见 [UiScaleApplier].
-     */
     private var appliedUiScale: Float = 1f
-
-    /**
-     * 已经请求过重建. `recreate()` 自己会销毁 Compose 树, 从而**再次**触发那个「离开设置页就对齐」的
-     * onDispose —— 那时读到的仍是本 Activity 的旧 [appliedUiScale], 会对着一个正在销毁的 Activity
-     * 再调一次 `recreate()`. 这个标志让重建请求只发一次.
-     */
     private var uiScaleRestartRequested = false
 
     private val uiScaleApplier = object : UiScaleApplier {
@@ -79,16 +72,11 @@ class MainActivity : AniComponentActivity() {
             if (scale == appliedUiScale || uiScaleRestartRequested) return
             if (isFinishing || isDestroyed) return
             uiScaleRestartRequested = true
-            // 重建后的 attachBaseContext 会重新读镜像, 所以必须先落盘再 recreate
             UiScaleMirror.write(this@MainActivity, scale)
             recreate()
         }
     }
 
-    /**
-     * 界面缩放要改的是 Activity 的 `densityDpi` —— 只有这样弹窗 (各自独立 window) 才会跟着变.
-     * 这是唯一能在 Activity 创建前介入的时机.
-     */
     override fun attachBaseContext(newBase: Context) {
         val scale = UiScaleMirror.read(newBase)
         appliedUiScale = scale
@@ -110,7 +98,7 @@ class MainActivity : AniComponentActivity() {
                 try {
                     if (!aniNavigator.isBackStackReady()) {
                         aniNavigator.awaitBackStack()
-                        delay(1000) // 等待初始化好, 否则跳转可能无效
+                        delay(1000)
                     }
                     aniNavigator.navigateSubjectDetails(id, placeholder = null)
                 } catch (e: Exception) {
@@ -124,23 +112,19 @@ class MainActivity : AniComponentActivity() {
         super.onCreate(savedInstanceState)
         handleStartIntent(intent)
 
-        // 本形态 (phone / tv) 的附加初始化, 见各 flavor 下的 FormFactorSetup.kt
         onFormFactorActivityCreated(this)
 
         enableEdgeToEdge(
-            // 透明状态栏
             statusBarStyle = SystemBarStyle.auto(
                 android.graphics.Color.TRANSPARENT,
                 android.graphics.Color.TRANSPARENT,
             ),
-            // 透明导航栏
             navigationBarStyle = SystemBarStyle.auto(
                 android.graphics.Color.TRANSPARENT,
                 android.graphics.Color.TRANSPARENT,
             ),
         )
 
-        // 允许画到 system bars
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         val toaster = object : Toaster {
@@ -151,8 +135,6 @@ class MainActivity : AniComponentActivity() {
 
         val externalContentProvider = externalContentProviderFactory.create(this, lifecycleScope)
 
-        // 把界面缩放抄进 SharedPreferences: attachBaseContext 拿不到 DataStore (还没有协程可用).
-        // 挪到 IO: write 是同步落盘 (commit), 拖滑块每过一格都会触发一次, 放主线程会加剧拖动时的卡顿
         lifecycleScope.launch(Dispatchers.IO) {
             settingsRepository.themeSettings.flow
                 .map { it.effectiveUiScale }
@@ -161,7 +143,6 @@ class MainActivity : AniComponentActivity() {
         }
 
         setContent {
-            // 界面行为由本形态决定, 共享界面代码不判断设备 (见 AniUiBehavior)
             AniApp(uiBehavior = formFactorUiBehavior, uiScaleApplier = uiScaleApplier) {
                 val externalComponentProviderUpdated by rememberUpdatedState(externalContentProvider)
 
@@ -172,18 +153,19 @@ class MainActivity : AniComponentActivity() {
                     LocalPlatformWindow provides rememberPlatformWindow(this),
                     LocalExternalContentProvider provides externalComponentProviderUpdated,
                 ) {
-                    // Expose Modifier.testTag as resource-id in accessibility/uiautomator dumps,
-                    // so UI-automation agents can locate elements by stable ids (debug only).
                     @OptIn(ExperimentalComposeUiApi::class)
                     val rootModifier = if (BuildConfig.DEBUG) {
                         Modifier.semantics { testTagsAsResourceId = true }
                     } else {
                         Modifier
                     }
+                    val disableAnimations = remember {
+                        val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+                        am.memoryClass <= 256 || Build.VERSION.SDK_INT <= Build.VERSION_CODES.P
+                    }
                     Box(rootModifier) {
-                        // 本形态特有的页面变体装配 (见各 Local*Variant 插槽)
                         InstallFormFactorUi(aniNavigator) {
-                            AniAppContent(aniNavigator)
+                            AniAppContent(aniNavigator, disableAnimations = disableAnimations)
                         }
                     }
                 }
